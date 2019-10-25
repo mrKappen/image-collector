@@ -2,54 +2,47 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
-	"text/template"
+
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
-//User struct for each user
-type User struct {
-	FirstName string
-	LastName  string
-	Email     string
-	Password  string
-}
-
-//user data
-type UserData struct {
-	userID primitive.ObjectID
-}
-
 func signUp(w http.ResponseWriter, r *http.Request) {
-	var newUserData UserData
-	t, _ := template.ParseFiles("static/html/index.html")
-	t.Execute(w, nil)
+	//TODO: ensure created user is unique
 	var user User
-	if r.Body == nil {
-		http.Error(w, "Send a body", 400)
+	var createdUser User
+	_ = json.NewDecoder(r.Body).Decode(&user)
+	uniqueEmail := user.Email
+	usersCollection := getCollection("users")
+	userDataCollection := getCollection("userData")
+	usersCollection.InsertOne(context.TODO(), user)
+	filter := bson.D{primitive.E{"Email", uniqueEmail}}
+	err := usersCollection.FindOne(context.TODO(), filter).Decode(&createdUser)
+	userDataID := createdUser.UserID.Hex()
+	_, err = userDataCollection.InsertOne(context.TODO(), UserData{UserID: userDataID})
+	if err != nil {
+		http.Error(w, "failed to register user", 400)
 		return
 	}
-	user.FirstName = r.FormValue("firstName")
-	user.LastName = r.FormValue("lastName")
-	user.Email = r.FormValue("email")
-	user.Password = r.FormValue("password")
-	collectionUsers := getCollection("users")
-	collectionData := getCollection("userData")
-	collectionUsers.InsertOne(context.TODO(), user)
-	collectionUsers.FindOne(context.TODO(), bson.D{{"email", user.Email}}).Decode(&newUserData)
-	collectionData.InsertOne(context.TODO(), newUserData)
+	http.Error(w, "Success", 200)
 }
 
 func checkLogin(w http.ResponseWriter, r *http.Request) {
-	var user User
-	collectionUsers := getCollection("users")
-	collectionUsers.FindOne(context.TODO(), bson.D{{"email", r.FormValue("email")}}).Decode(&user)
-	if user.Password == r.FormValue("password") {
-		t, _ := template.ParseFiles("static/html/user-page.html")
-		t.Execute(w, nil)
-	} else {
-		http.Error(w, "incorrect password", 400)
-	}
+	// var user User
+	// collectionUsers := getCollection("users")
+	// collectionUsers.FindOne(context.TODO(), bson.D{{"email", r.FormValue("email")}}).Decode(&user)
+	// if user.Password == r.FormValue("password") {
+	// 	//Send get request for user data based on id
+	// 	idStr := user.userID.String()
+	// 	fmt.Println(user)
+	// 	_, err := http.Get("/user/" + idStr)
+	// 	if err != nil {
+	// 		//handle error
+	// 	}
+	// } else {
+	// 	http.Error(w, "incorrect password", 400)
+	// }
 }

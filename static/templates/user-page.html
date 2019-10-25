@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0,shrink-to-fit=no">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="/node_modules/vue/dist/vue.min.js"></script>
+    <link rel="stylesheet" href="/node_modules/bootstrap-vue/dist/bootstrap-vue.css">
+    </link>
+    <script src="/node_modules/bootstrap-vue/dist/bootstrap-vue.min.js"></script>
+    <!-- <script src="/static/util.js"></script> -->
+    <title>Document</title>
+</head>
+
+<body>
+    <div id="userPage">
+        <div class="container" style="position: relative;">
+            <button style="margin-left: 1em;margin-top: 1em;" @click="addCollection">Add Collection</button>
+            <div v-for="collection in collections" style="margin: 1em;">
+                <b-card variant="light" v-bind:title="collection.collectionName">
+                    <b-card-body>
+                        <b-form-file accept="image/*" multiple v-model="collection.files"
+                            placeholder="Choose an image or drop it here">
+                    </b-card-body>
+                </b-card>
+                <button style="margin-top: 0.5em;" @click="uploadImages(collection)">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</body>
+<script type="module">
+    var vm = new Vue({
+        el: '#userPage',
+        data: {
+            userId: '',
+            collections: [],
+        },
+        created: function () {
+            let url = window.location.toString().split('/')
+            let urlArray = Array.from(url)
+            this.userId = urlArray[urlArray.indexOf('user') + 1]
+        },
+        methods: {
+            addCollection: function () {
+                this.collections.push({
+                    userId: this.userId,
+                    collectionID: this.generateUniqueID(),
+                    collectionName: 'My Pictures',
+                    images: []
+                })
+                axios.post("/user-internal/" + this.userId + "/add-collection", this.collections, {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }).then(r => {
+                    console.log("SUCCESSFULLY ADDED COLLECTION")
+                })
+            },
+            uploadImages: function (collection) {
+                console.log(collection)
+                let formData = new FormData()
+                formData.append("collectionID", collection.collectionID)
+                collection.files.forEach((file, index) => {
+                    formData.append("file-" + index, file)
+                    formData.append("fileID-" + index, this.generateUniqueID())
+                });
+                formData.append("collectionID", collection.collectionID)
+                formData.append("fileCount", collection.files.length)
+                axios.post("/user-internal/" + this.userId + "/add-images", formData,
+                    {
+                        headers: {
+                            'Content-Type': 'multipart/form-data'
+                        }
+                    }).then(r => {
+                        console.log("FILES UPLOADED SUCCESSFULLY")
+                        collection.files = ''
+                    })
+            },
+            generateUniqueID: function () {
+                return (new Date()).valueOf().toString(16) + Math.random(10).toString(16).substring(2);
+            }
+        }
+    })
+    export default { vm }
+</script>
+
+</html>
