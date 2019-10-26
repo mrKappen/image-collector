@@ -15,7 +15,6 @@ import (
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var db *mongo.Client
@@ -25,6 +24,34 @@ var mutex = &sync.Mutex{}
 //router := mux.NewRouter()
 var router *mux.Router
 
+func init() {
+	db, dbError = setUpDb()
+	if dbError != nil {
+		fmt.Printf(dbError.Error())
+	}
+	router = mux.NewRouter()
+}
+
+func main() {
+	//PUBLIC
+	router.HandleFunc("/", index).Methods("GET")
+	router.HandleFunc("/login", login).Methods("GET")
+	router.HandleFunc("/register", register).Methods("GET")
+	router.HandleFunc("/register", signUp).Methods("POST")
+	router.HandleFunc("/checkLogin", checkLogin).Methods("POST")
+	router.HandleFunc("/user/{userId}", getUser).Methods("GET")
+	//INTERNAL
+	router.HandleFunc("/user-internal/{email}", getUserByEmail).Methods("PUT")
+	router.HandleFunc("/user-data-internal/{userId}", getUserDataByID).Methods("GET")
+	router.HandleFunc("/user-internal/{userId}/add-collection", addCollection).Methods("POST")
+	router.HandleFunc("/user-internal/{userId}/add-images", uploadImages).Methods("POST")
+	router.HandleFunc("/user-internal/{userId}/get-collections", getImageCollections).Methods("GET")
+	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	router.PathPrefix("/node_modules/").Handler(http.StripPrefix("/node_modules/", http.FileServer(http.Dir("node_modules"))))
+	fmt.Println("**************STARTING THE SERVER**************")
+	err := http.ListenAndServe(":8080", router)
+	fmt.Println(err)
+}
 func index(w http.ResponseWriter, r *http.Request) {
 	t := template.Must(template.ParseFiles("static/templates/index.html"))
 	t.Execute(w, nil)
@@ -73,12 +100,10 @@ func getUserDataByID(w http.ResponseWriter, r *http.Request) {
 func uploadImages(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("---UPLOADING IMAGES---")
 	err := r.ParseMultipartForm(1200000)
-	userID := (mux.Vars(r))["userId"]
 	numberOfFiles, err := strconv.Atoi((r.Form)["fileCount"][0])
 	collectionID := (r.Form)["collectionID"][0]
 
 	images := getCollection("images")
-	userData := getCollection("userData")
 	if err != nil {
 		fmt.Println("FAILED TO PARSE FORM")
 		http.Error(w, err.Error(), 400)
@@ -87,14 +112,11 @@ func uploadImages(w http.ResponseWriter, r *http.Request) {
 	fileData := make([][]byte, numberOfFiles)
 	headers := make([]*multipart.FileHeader, numberOfFiles)
 	var operations []mongo.WriteModel
-	updatedImageIds := make([]string, numberOfFiles)
 	var wg sync.WaitGroup
 	for i := 0; i < numberOfFiles; i++ {
 		file[i], headers[i], err = r.FormFile("file-" + strconv.Itoa(i))
-		imageID := ((r.Form)["fileID-"+strconv.Itoa(i)])[0]
-		updatedImageIds[i] = imageID
 		wg.Add(1)
-		go performDbWrite(file[i], fileData[i], imageID, headers[i], &operations, &wg)
+		go performDbWrite(file[i], fileData[i], collectionID, headers[i], &operations, &wg)
 	}
 	wg.Wait()
 	_, err = images.BulkWrite(context.TODO(), operations)
@@ -103,18 +125,9 @@ func uploadImages(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 400)
 		return
 	}
-	fmt.Println(updatedImageIds)
-	filter := bson.D{{"UserID", userID}}
-	update := bson.M{"$set": bson.M{"Collections.$[elem].Images": updatedImageIds}}
-	opts := options.Update().SetArrayFilters(options.ArrayFilters{Filters: []interface{}{bson.M{"elem.CollectionID": collectionID}}})
-	userData.UpdateOne(context.TODO(), filter, update, opts)
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
 	http.Error(w, "", 200)
 }
-func performDbWrite(file multipart.File, fileData []byte, imageID string, header *multipart.FileHeader, operations *[]mongo.WriteModel, wg *sync.WaitGroup) {
+func performDbWrite(file multipart.File, fileData []byte, collectionID string, header *multipart.FileHeader, operations *[]mongo.WriteModel, wg *sync.WaitGroup) {
 	defer file.Close()
 	var compressedFile bytes.Buffer
 	zw := gzip.NewWriter(&compressedFile)
@@ -135,7 +148,7 @@ func performDbWrite(file multipart.File, fileData []byte, imageID string, header
 		fmt.Println("failed to save file")
 		return
 	}
-	image := ImageObj{ImageID: imageID, Image: compressedFile.Bytes()}
+	image := ImageObj{CollectionID: collectionID, Image: compressedFile.Bytes()}
 	operation.SetDocument(image)
 	mutex.Lock()
 	*operations = append(*operations, operation)
@@ -143,13 +156,6 @@ func performDbWrite(file multipart.File, fileData []byte, imageID string, header
 	wg.Done()
 }
 
-func init() {
-	db, dbError = setUpDb()
-	if dbError != nil {
-		fmt.Printf(dbError.Error())
-	}
-	router = mux.NewRouter()
-}
 func addCollection(w http.ResponseWriter, r *http.Request) {
 	//TODO:verify that the user exists
 	var collections []Collection
@@ -167,22 +173,18 @@ func addCollection(w http.ResponseWriter, r *http.Request) {
 	}
 	http.Error(w, "Success", 201)
 }
-func main() {
-	//PUBLIC
-	router.HandleFunc("/", index).Methods("GET")
-	router.HandleFunc("/login", login).Methods("GET")
-	router.HandleFunc("/register", register).Methods("GET")
-	router.HandleFunc("/register", signUp).Methods("POST")
-	router.HandleFunc("/checkLogin", checkLogin).Methods("POST")
-	router.HandleFunc("/user/{userId}", getUser).Methods("GET")
-	//INTERNAL
-	router.HandleFunc("/user-internal/{email}", getUserByEmail).Methods("PUT")
-	router.HandleFunc("/user-data-internal/{userId}", getUserDataByID).Methods("GET")
-	router.HandleFunc("/user-internal/{userId}/add-collection", addCollection).Methods("POST")
-	router.HandleFunc("/user-internal/{userId}/add-images", uploadImages).Methods("POST")
-	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-	router.PathPrefix("/node_modules/").Handler(http.StripPrefix("/node_modules/", http.FileServer(http.Dir("node_modules"))))
-	fmt.Println("**************STARTING THE SERVER**************")
-	err := http.ListenAndServe(":8080", router)
-	fmt.Println(err)
+
+func getImageCollections(w http.ResponseWriter, r *http.Request) {
+	userID := (mux.Vars(r))["userId"]
+	userData := getCollection("userData")
+	userDataObj := UserData{}
+	filter := bson.D{{"UserID", userID}}
+	userData.FindOne(context.TODO(), filter).Decode(&userDataObj)
+	v, err := json.Marshal(userDataObj)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	w.Header().Add("Content-type", "application/json")
+	w.Write(v)
 }

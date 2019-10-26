@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="/node_modules/bootstrap-vue/dist/bootstrap-vue.css">
     </link>
     <script src="/node_modules/bootstrap-vue/dist/bootstrap-vue.min.js"></script>
+    <link rel="stylesheet" href="/node_modules/@fortawesome/fontawesome-free/css/all.min.css">
     <!-- <script src="/static/util.js"></script> -->
     <title>Document</title>
 </head>
@@ -20,14 +21,17 @@
     <div id="userPage">
         <div class="container" style="position: relative;">
             <button style="margin-left: 1em;margin-top: 1em;" @click="addCollection">Add Collection</button>
-            <div v-for="collection in collections" style="margin: 1em;">
+            <div v-for="(collection,index) in collections" style="margin: 1em;">
                 <b-card variant="light" v-bind:title="collection.collectionName">
                     <b-card-body>
                         <b-form-file accept="image/*" multiple v-model="collection.files"
                             placeholder="Choose an image or drop it here">
                     </b-card-body>
+                    <b-row class="arrow justify-content-center" v-bind:class="{clicked:collections[index].showImages}" @click="setShowImages(collection)">
+                        <i v-bind:class="{clicked:collections[index].showImages}" class="fas fa-angle-down"  style="font-size: 3em;" ></i>
+                    </b-row>
                 </b-card>
-                <button style="margin-top: 0.5em;" @click="uploadImages(collection)">Save Changes</button>
+                <button style="margin-top: 0.5em;" @click="uploadImages">Save Changes</button>
             </div>
         </div>
     </div>
@@ -39,18 +43,34 @@
             userId: '',
             collections: [],
         },
+
         created: function () {
             let url = window.location.toString().split('/')
             let urlArray = Array.from(url)
             this.userId = urlArray[urlArray.indexOf('user') + 1]
+            this.getCollections()
         },
         methods: {
+            setShowImages:function(collection){
+                console.log(collection.showImages)
+                this.$set(collection,"showImages",!collection.showImages)
+            },
+            getCollections: function () {
+                "inside getCollections"
+                axios.get("/user-internal/" + this.userId + "/get-collections")
+                    .then(r => {
+                        let resBody = r.data
+                        this.collections = this.collections.concat(resBody.collections)
+                    })
+            },
             addCollection: function () {
+                "inside addCollection"
                 this.collections.push({
                     userId: this.userId,
                     collectionID: this.generateUniqueID(),
                     collectionName: 'My Pictures',
-                    images: []
+                    images: [],
+                    showImages:false
                 })
                 axios.post("/user-internal/" + this.userId + "/add-collection", this.collections, {
                     headers: {
@@ -63,10 +83,9 @@
             uploadImages: function (collection) {
                 console.log(collection)
                 let formData = new FormData()
-                formData.append("collectionID", collection.collectionID)
                 collection.files.forEach((file, index) => {
                     formData.append("file-" + index, file)
-                    formData.append("fileID-" + index, this.generateUniqueID())
+                    // formData.append("fileID-" + index, this.generateUniqueID())
                 });
                 formData.append("collectionID", collection.collectionID)
                 formData.append("fileCount", collection.files.length)
@@ -87,5 +106,13 @@
     })
     export default { vm }
 </script>
+<style>
+    .arrow i{
+        transition: all 0.4s ease;
+    }
+    .arrow i.clicked{
+        transform: rotateZ(-180deg);
+    }
+</style>
 
 </html>

@@ -21,13 +21,12 @@ type UserData struct {
 
 //ImageObj object stored in the images collection
 type ImageObj struct {
-	Image   interface{} `json:"images" bson:"Image"`
-	ImageID string      `json:"imageID" bson:"ImageID`
+	Image        interface{} `json:"images" bson:"Image"`
+	CollectionID string      `json:"collectionID" bson:"CollectionID"`
 }
 
 //Collection object
 type Collection struct {
-	CollectionID   string   `json:"collectionID" bson:"CollectionID"`
-	CollectionName string   `json:"collectionName" bson:"CollectionName"`
-	Images         []string `json:"images" bson:"Images"`
+	CollectionID   string `json:"collectionID" bson:"CollectionID"`
+	CollectionName string `json:"collectionName" bson:"CollectionName"`
 }
