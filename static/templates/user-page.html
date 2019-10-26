@@ -31,29 +31,38 @@
     <div id="userPage">
         <div class="container" style="position: relative;">
             <button style="margin-left: 1em;margin-top: 1em;" @click="addCollection">Add Collection</button>
-            <div v-for="(collection,index) in collections" style="margin: 1em;position: relative;">
-                <b-card variant="light" v-bind:title="collection.collectionName">
-                    <i class="fas fa-times deleteCollection"style="position: absolute; right: 0.25em;top:0.25em" @click="deleteCollection"></i>
-                    <b-card-body>
-                        <b-form-file accept="image/*" multiple v-model="collection.files"
-                            placeholder="Choose an image or drop it here">
-                    </b-card-body>
-                    <div data-toggle="collapse" role="button" v-bind:data-target="'#collapse'+index"
-                        aria-expanded="false" v-bind:aria-controls="'collapse'+index">
-                        <b-row class="arrow justify-content-center"
-                            v-bind:class="{clicked:collections[index].showImages}" @click="setShowImages(collection)">
-                            <i v-bind:class="{clicked:collections[index].showImages}" class="fas fa-angle-down"
-                                style="font-size: 3em;"></i>
-                        </b-row>
-                    </div>
-                    <div class="collapse" v-bind:id="'collapse'+index">
-                        <div class="card card-body">
+            <transition-group name="list">
+                <div v-for="(collection,index) in collections" style="margin: 1em;position: relative;"
+                    v-bind:key="collection">
+                    <div>
+                        <b-card variant="light" v-bind:title="collection.collectionName">
+                            <i class="fas fa-times deleteCollection"
+                                style="position: absolute; right: 0.25em;top:0.25em"
+                                @click="deleteCollection(index)"></i>
+                            <b-card-body>
+                                <b-form-file accept="image/*" multiple v-model="collection.files"
+                                    placeholder="Choose an image or drop it here">
+                            </b-card-body>
+                            <div data-toggle="collapse" role="button" v-bind:data-target="'#collapse'+index"
+                                aria-expanded="false" v-bind:aria-controls="'collapse'+index">
+                                <b-row class="arrow justify-content-center"
+                                    v-bind:class="{clicked:collections[index].showImages}"
+                                    @click="setShowImages(collection)">
+                                    <i v-bind:class="{clicked:collections[index].showImages}" class="fas fa-angle-down"
+                                        style="font-size: 3em;"></i>
+                                </b-row>
+                            </div>
+                            <div class="collapse" v-bind:id="'collapse'+index">
+                                <div class="card card-body">
 
-                        </div>
+                                </div>
+                            </div>
+                        </b-card>
+                        <button style="margin-top: 0.5em;" @click="uploadImages">Save Changes</button>
                     </div>
-                </b-card>
-                <button style="margin-top: 0.5em;" @click="uploadImages">Save Changes</button>
-            </div>
+                </div>
+            </transition-group>
+
         </div>
     </div>
 </body>
@@ -72,9 +81,17 @@
             this.getCollections()
         },
         methods: {
-            deleteCollection:function(){
-                
-            }
+            deleteCollection: function (index) {
+                this.$set(this.collections[index], "isDeleted", true)
+                this.collections.splice(index, 1)
+                axios.post("/user-internal/" + this.userId + "/add-collection", this.collections, {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }).then(r => {
+                    console.log("SUCCESSFULLY DELETED COLLECTION")
+                })
+            },
             setShowImages: function (collection) {
                 console.log(collection.showImages)
                 this.$set(collection, "showImages", !collection.showImages)
@@ -138,11 +155,22 @@
     .arrow i.clicked {
         transform: rotateZ(-180deg);
     }
-    .deleteCollection{
+
+    .deleteCollection {
         font-size: 1.5em;
     }
-    .deleteCollection:hover{
+
+    .deleteCollection:hover {
         color: red;
+    }
+
+    .list-enter-active,
+    .list-leave-active {
+        transition: all 0.4s ease;
+    }
+    .list-enter,
+    .list-leave-to {
+        opacity: 0;
     }
 </style>
 
