@@ -7,6 +7,16 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
         integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+        integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+        integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+        crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+        crossorigin="anonymous"></script>
+
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <script src="/node_modules/vue/dist/vue.min.js"></script>
     <link rel="stylesheet" href="/node_modules/bootstrap-vue/dist/bootstrap-vue.css">
@@ -21,15 +31,26 @@
     <div id="userPage">
         <div class="container" style="position: relative;">
             <button style="margin-left: 1em;margin-top: 1em;" @click="addCollection">Add Collection</button>
-            <div v-for="(collection,index) in collections" style="margin: 1em;">
+            <div v-for="(collection,index) in collections" style="margin: 1em;position: relative;">
                 <b-card variant="light" v-bind:title="collection.collectionName">
+                    <i class="fas fa-times deleteCollection"style="position: absolute; right: 0.25em;top:0.25em" @click="deleteCollection"></i>
                     <b-card-body>
                         <b-form-file accept="image/*" multiple v-model="collection.files"
                             placeholder="Choose an image or drop it here">
                     </b-card-body>
-                    <b-row class="arrow justify-content-center" v-bind:class="{clicked:collections[index].showImages}" @click="setShowImages(collection)">
-                        <i v-bind:class="{clicked:collections[index].showImages}" class="fas fa-angle-down"  style="font-size: 3em;" ></i>
-                    </b-row>
+                    <div data-toggle="collapse" role="button" v-bind:data-target="'#collapse'+index"
+                        aria-expanded="false" v-bind:aria-controls="'collapse'+index">
+                        <b-row class="arrow justify-content-center"
+                            v-bind:class="{clicked:collections[index].showImages}" @click="setShowImages(collection)">
+                            <i v-bind:class="{clicked:collections[index].showImages}" class="fas fa-angle-down"
+                                style="font-size: 3em;"></i>
+                        </b-row>
+                    </div>
+                    <div class="collapse" v-bind:id="'collapse'+index">
+                        <div class="card card-body">
+
+                        </div>
+                    </div>
                 </b-card>
                 <button style="margin-top: 0.5em;" @click="uploadImages">Save Changes</button>
             </div>
@@ -51,9 +72,12 @@
             this.getCollections()
         },
         methods: {
-            setShowImages:function(collection){
+            deleteCollection:function(){
+                
+            }
+            setShowImages: function (collection) {
                 console.log(collection.showImages)
-                this.$set(collection,"showImages",!collection.showImages)
+                this.$set(collection, "showImages", !collection.showImages)
             },
             getCollections: function () {
                 "inside getCollections"
@@ -70,7 +94,7 @@
                     collectionID: this.generateUniqueID(),
                     collectionName: 'My Pictures',
                     images: [],
-                    showImages:false
+                    showImages: false
                 })
                 axios.post("/user-internal/" + this.userId + "/add-collection", this.collections, {
                     headers: {
@@ -107,11 +131,18 @@
     export default { vm }
 </script>
 <style>
-    .arrow i{
+    .arrow i {
         transition: all 0.4s ease;
     }
-    .arrow i.clicked{
+
+    .arrow i.clicked {
         transform: rotateZ(-180deg);
+    }
+    .deleteCollection{
+        font-size: 1.5em;
+    }
+    .deleteCollection:hover{
+        color: red;
     }
 </style>
 
