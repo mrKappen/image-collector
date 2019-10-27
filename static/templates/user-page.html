@@ -30,19 +30,21 @@
 <body>
     <div id="userPage">
         <div class="container" style="position: relative;">
-            <button style="margin-left: 1em;margin-top: 1em;" @click="addCollection">Add Collection</button>
+            <button class="btn btn-outline-primary" style="margin-left: 1em;margin-top: 1em;" @click="addCollection">Add Collection</button>
             <transition-group name="list">
                 <div v-for="(collection,index) in collections" style="margin: 1em;position: relative;"
                     v-bind:key="collection">
                     <div>
-                        <b-card variant="light" v-bind:title="collection.collectionName">
+                        <div class="card" variant="light">
                             <i class="fas fa-times deleteCollection"
                                 style="position: absolute; right: 0.25em;top:0.25em"
                                 @click="deleteCollection(index)"></i>
-                            <b-card-body>
+                            <div class="card-body">
+                                <h4 class="card-title" contenteditable v-bind:id="'collection-title-'+index">
+                                    {{collections[index].collectionName}}</h4>
                                 <b-form-file accept="image/*" multiple v-model="collection.files"
                                     placeholder="Choose an image or drop it here">
-                            </b-card-body>
+                            </div>
                             <div data-toggle="collapse" role="button" v-bind:data-target="'#collapse'+index"
                                 aria-expanded="false" v-bind:aria-controls="'collapse'+index">
                                 <b-row class="arrow justify-content-center"
@@ -53,12 +55,12 @@
                                 </b-row>
                             </div>
                             <div class="collapse" v-bind:id="'collapse'+index">
-                                <div class="card card-body">
+                                <div class="card card-body" style="margin: 1em;">
 
                                 </div>
                             </div>
-                        </b-card>
-                        <button style="margin-top: 0.5em;" @click="uploadImages">Save Changes</button>
+                        </div>
+                        <button class="btn btn-outline-success" style="margin-top: 0.5em;" @click="saveCollection(collection,index)">Save Changes</button>
                     </div>
                 </div>
             </transition-group>
@@ -72,6 +74,7 @@
         data: {
             userId: '',
             collections: [],
+            test: 'jhkjhj'
         },
 
         created: function () {
@@ -81,6 +84,11 @@
             this.getCollections()
         },
         methods: {
+            setCollectionTitle: function (event, collection) {
+                console.log(event.target.innerText)
+                collection.collectionName = event.target.innerText
+
+            },
             deleteCollection: function (index) {
                 this.$set(this.collections[index], "isDeleted", true)
                 this.collections.splice(index, 1)
@@ -121,9 +129,14 @@
                     console.log("SUCCESSFULLY ADDED COLLECTION")
                 })
             },
-            uploadImages: function (collection) {
+            saveCollection: function (collection,index) {
                 console.log(collection)
                 let formData = new FormData()
+                let collectionTitle = "collection-title-"+index
+                collection.collectionName = document.getElementById(collectionTitle).innerText
+                if(collection.files == undefined){
+                    collection.files = []
+                }
                 collection.files.forEach((file, index) => {
                     formData.append("file-" + index, file)
                     // formData.append("fileID-" + index, this.generateUniqueID())
@@ -139,6 +152,13 @@
                         console.log("FILES UPLOADED SUCCESSFULLY")
                         collection.files = ''
                     })
+                axios.post("/user-internal/" + this.userId + "/add-collection", this.collections, {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }).then(r => {
+                    console.log("SUCCESSFULLY ADDED COLLECTION")
+                })
             },
             generateUniqueID: function () {
                 return (new Date()).valueOf().toString(16) + Math.random(10).toString(16).substring(2);
@@ -168,9 +188,14 @@
     .list-leave-active {
         transition: all 0.4s ease;
     }
+
     .list-enter,
     .list-leave-to {
         opacity: 0;
+    }
+
+    .card-title:focus {
+        outline: none;
     }
 </style>
 

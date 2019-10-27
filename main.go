@@ -9,6 +9,7 @@ import (
 	"html/template"
 	"mime/multipart"
 	"net/http"
+	"os"
 	"strconv"
 	"sync"
 
@@ -66,11 +67,25 @@ func register(w http.ResponseWriter, r *http.Request) {
 	t.Execute(w, nil)
 }
 func getUser(w http.ResponseWriter, r *http.Request) {
-	t, _ := template.ParseFiles("static/templates/user-page.html")
-	err := t.Execute(w, nil)
+	// t, _ := template.ParseFiles("static/templates/user-page.html")
+	// err := t.Execute(w, nil)
+	// if err != nil {
+	// 	fmt.Println(err.Error())
+	// }
+	userPage, _ := os.Open("static/templates/user-page.html")
+	fileSize, err := userPage.Stat()
+	userPageData := make([]byte, fileSize.Size())
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println("Error: ", err.Error())
+		return
 	}
+	_, err = userPage.Read(userPageData)
+	if err != nil {
+		fmt.Println("Error: ", err.Error())
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write(userPageData)
 }
 func getUserByEmail(w http.ResponseWriter, r *http.Request) {
 	var user User
@@ -119,7 +134,9 @@ func uploadImages(w http.ResponseWriter, r *http.Request) {
 		go performDbWrite(file[i], fileData[i], collectionID, headers[i], &operations, &wg)
 	}
 	wg.Wait()
-	_, err = images.BulkWrite(context.TODO(), operations)
+	if len(operations) > 0 {
+		_, err = images.BulkWrite(context.TODO(), operations)
+	}
 	if err != nil {
 		fmt.Println("error: " + err.Error())
 		http.Error(w, err.Error(), 400)
