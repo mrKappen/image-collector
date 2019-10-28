@@ -17,7 +17,7 @@
         integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
         crossorigin="anonymous"></script>
 
-    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="/node_modules/axios/dist/axios.min.js"></script>
     <script src="/node_modules/vue/dist/vue.min.js"></script>
     <link rel="stylesheet" href="/node_modules/bootstrap-vue/dist/bootstrap-vue.css">
     </link>
@@ -55,7 +55,7 @@
                                 </b-row>
                             </div>
                             <div class="collapse" v-bind:id="'collapse'+index">
-                                <div class="card card-body" style="margin: 1em;">
+                                <div class="card card-body" style="margin: 1em;margin-top: 0em;">
 
                                 </div>
                             </div>
@@ -74,7 +74,6 @@
         data: {
             userId: '',
             collections: [],
-            test: 'jhkjhj'
         },
 
         created: function () {
@@ -103,6 +102,10 @@
             setShowImages: function (collection) {
                 console.log(collection.showImages)
                 this.$set(collection, "showImages", !collection.showImages)
+                axios.get("/user-internal/collections/"+collection.collectionID+"/get-images")
+                .then(r=>{
+                    console.log(r)
+                })
             },
             getCollections: function () {
                 "inside getCollections"
@@ -137,10 +140,13 @@
                 if(collection.files == undefined){
                     collection.files = []
                 }
-                collection.files.forEach((file, index) => {
+                if(collection.files.length >0){
+                    collection.files.forEach((file, index) => {
                     formData.append("file-" + index, file)
-                    // formData.append("fileID-" + index, this.generateUniqueID())
+                    formData.append("file-"+index+'id',generateUniqueID())
                 });
+                }
+
                 formData.append("collectionID", collection.collectionID)
                 formData.append("fileCount", collection.files.length)
                 axios.post("/user-internal/" + this.userId + "/add-images", formData,
