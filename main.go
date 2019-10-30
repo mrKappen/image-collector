@@ -1,11 +1,11 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
@@ -49,70 +49,69 @@ func main() {
 	router.HandleFunc("/user-internal/{userId}/add-collection", addCollection).Methods("POST")
 	router.HandleFunc("/user-internal/{userId}/add-images", uploadImages).Methods("POST")
 	router.HandleFunc("/user-internal/{userId}/get-collections", getImageCollections).Methods("GET")
-	router.HandleFunc("/user-internal/collections/{collectionId}/get-images", getImages).Methods("GET")
+	router.HandleFunc("/user-internal/collections/{collectionId}/images/{imageId}", getImages).Methods("GET")
+	router.HandleFunc("/user-internal/remove-collection-images/{collectionId}", removeImages).Methods("DELETE")
 	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	router.PathPrefix("/node_modules/").Handler(http.StripPrefix("/node_modules/", http.FileServer(http.Dir("node_modules"))))
 	fmt.Println("**************STARTING THE SERVER**************")
-	err := http.ListenAndServe(":8080", router)
+	err := http.ListenAndServe(":80", router)
 	fmt.Println(err)
 }
-func getImages(w http.ResponseWriter, r *http.Request) {
+func removeImages(w http.ResponseWriter, r *http.Request) {
 	collectionID := (mux.Vars(r))["collectionId"]
 	images := getCollection("images")
 	filter := bson.D{{"CollectionID", collectionID}}
-	cur, err := images.Find(context.TODO(), filter)
-	var imageData []ImageObjRetrieve
-	maxData := int64(0)
-	var writer bytes.Buffer
-	imageForm := multipart.NewWriter(&writer)
-	defer imageForm.Close()
-	var wg sync.WaitGroup
+	_, err := images.DeleteMany(context.TODO(), filter)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
-	err = cur.All(context.TODO(), &imageData)
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		return
-	}
-	for index, imageObj := range imageData {
-		wg.Add(1)
-		maxData += imageObj.Size
-		go umCompressImageAndAddToForm(imageObj, index, &wg, imageForm)
-	}
-	wg.Wait()
-	w.Header().Set("Content-Type", "multipart/form-data")
-	imageReader := multipart.NewReader(&writer, imageForm.Boundary())
-	form, err := imageReader.ReadForm(maxData)
-	if err != nil {
-		http.Error(w, err.Error(), 400)
-		fmt.Println(form)
-		return
-	}
-	v, _ := json.Marshal(form)
-	w.Write(v)
-	http.Error(w, "Success", 200)
+	http.Error(w, "SUCCESS", 200)
 }
-func umCompressImageAndAddToForm(imageData ImageObjRetrieve, index int, wg *sync.WaitGroup, imageForm *multipart.Writer) {
-	f, err := ioutil.TempFile("static/temp", "Image-*."+imageData.FileType)
+func getImages(w http.ResponseWriter, r *http.Request) {
+	collectionID := (mux.Vars(r))["collectionId"]
+	imageID := (mux.Vars(r))["imageId"]
+	images := getCollection("images")
+	filter := bson.D{{"CollectionID", collectionID}, {"ImageID", imageID}}
+	var imageObj ImageObjRetrieve
+	images.FindOne(context.TODO(), filter).Decode(&imageObj)
+	f, err := ioutil.TempFile("static/temp", "Image-*."+imageObj.FileType)
 	defer func(file *os.File) {
 		file.Close()
 		os.Remove(file.Name())
 	}(f)
 	if err != nil {
 		fmt.Println("failed: ", err.Error())
+		http.Error(w, err.Error(), 400)
 		return
 	}
-	f.Write(imageData.Image)
-	mutexRetrieve.Lock()
-	_, err = imageForm.CreateFormFile("file-"+strconv.Itoa(index), f.Name())
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-	mutexRetrieve.Unlock()
+	f.Write(imageObj.Image)
+	w.Header().Set("Content-Disposition", "attachment; filename="+f.Name())
+	w.Header().Set("Content-Type", http.DetectContentType(imageObj.Image))
+	w.Header().Set("Content-Length", strconv.FormatInt(imageObj.Size, 10))
+	f.Seek(0, 0)
+	io.Copy(w, f)
 }
+
+// func umCompressImageAndAddToForm(imageData ImageObjRetrieve, index int, wg *sync.WaitGroup, imageForm *multipart.Writer) {
+// 	f, err := ioutil.TempFile("static/temp", "Image-*."+imageData.FileType)
+// 	defer func(file *os.File) {
+// 		file.Close()
+// 		os.Remove(file.Name())
+// 	}(f)
+// if err != nil {
+// 	fmt.Println("failed: ", err.Error())
+// 	return
+// }
+// 	f.Write(imageData.Image)
+// 	mutexRetrieve.Lock()
+// 	_, err = imageForm.CreateFormFile("file-"+strconv.Itoa(index), f.Name())
+// 	if err != nil {
+// 		fmt.Println(err.Error())
+// 		return
+// 	}
+// 	mutexRetrieve.Unlock()
+// }
 func index(w http.ResponseWriter, r *http.Request) {
 	t := template.Must(template.ParseFiles("static/templates/index.html"))
 	t.Execute(w, nil)
@@ -190,9 +189,9 @@ func uploadImages(w http.ResponseWriter, r *http.Request) {
 	var wg sync.WaitGroup
 	for i := 0; i < numberOfFiles; i++ {
 		file[i], headers[i], err = r.FormFile("file-" + strconv.Itoa(i))
-		fileId := (r.Form)["file-"+strconv.Itoa(i)+"-id"][0]
+		fileID := (r.Form)["file-"+strconv.Itoa(i)+"-id"][0]
 		wg.Add(1)
-		go performDbWrite(file[i], fileData[i], collectionID, headers[i], &operations, &wg, fileId)
+		go performDbWrite(file[i], fileData[i], collectionID, headers[i], &operations, &wg, fileID)
 	}
 	wg.Wait()
 	if len(operations) > 0 {
@@ -205,7 +204,7 @@ func uploadImages(w http.ResponseWriter, r *http.Request) {
 	}
 	http.Error(w, "", 200)
 }
-func performDbWrite(file multipart.File, fileData []byte, collectionID string, header *multipart.FileHeader, operations *[]mongo.WriteModel, wg *sync.WaitGroup, fileId string) {
+func performDbWrite(file multipart.File, fileData []byte, collectionID string, header *multipart.FileHeader, operations *[]mongo.WriteModel, wg *sync.WaitGroup, fileID string) {
 	defer file.Close()
 	fileType := header.Filename
 	fileType = fileType[strings.Index(fileType, ".")+1:]
@@ -221,7 +220,7 @@ func performDbWrite(file multipart.File, fileData []byte, collectionID string, h
 		fmt.Println("failed to save file")
 		return
 	}
-	image := ImageObjSend{CollectionID: collectionID, Image: fileData, FileType: fileType, Size: fileSize}
+	image := ImageObjSend{CollectionID: collectionID, Image: fileData, FileType: fileType, Size: fileSize, ImageID: fileID}
 	operation.SetDocument(image)
 	mutex.Lock()
 	*operations = append(*operations, operation)

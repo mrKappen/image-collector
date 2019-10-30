@@ -30,7 +30,8 @@
 <body>
     <div id="userPage">
         <div class="container" style="position: relative;">
-            <button class="btn btn-outline-primary" style="margin-left: 1em;margin-top: 1em;" @click="addCollection">Add Collection</button>
+            <button class="btn btn-outline-primary" style="margin-left: 1em;margin-top: 1em;" @click="addCollection">Add
+                Collection</button>
             <transition-group name="list">
                 <div v-for="(collection,index) in collections" style="margin: 1em;position: relative;"
                     v-bind:key="collection">
@@ -38,7 +39,7 @@
                         <div class="card" variant="light">
                             <i class="fas fa-times deleteCollection"
                                 style="position: absolute; right: 0.25em;top:0.25em"
-                                @click="deleteCollection(index)"></i>
+                                @click="deleteCollection(collection,index)"></i>
                             <div class="card-body">
                                 <h4 class="card-title" contenteditable v-bind:id="'collection-title-'+index">
                                     {{collections[index].collectionName}}</h4>
@@ -56,11 +57,19 @@
                             </div>
                             <div class="collapse" v-bind:id="'collapse'+index">
                                 <div class="card card-body" style="margin: 1em;margin-top: 0em;">
-
+                                    <b-row v-for="(chunk,index) in collection.imageUrls">
+                                        <div v-for="(imageID,index2) in chunk">
+                                            <b-col class="imageCol">
+                                                <img class="displayImages"
+                                                    v-bind:src="'/user-internal/collections/'+ collection.collectionID +'/images/'+imageID">
+                                            </b-col>
+                                        </div>
+                                    </b-row>
                                 </div>
                             </div>
                         </div>
-                        <button class="btn btn-outline-success" style="margin-top: 0.5em;" @click="saveCollection(collection,index)">Save Changes</button>
+                        <button class="btn btn-outline-success" style="margin-top: 0.5em;"
+                            @click="saveCollection(collection,index)">Save Changes</button>
                     </div>
                 </div>
             </transition-group>
@@ -73,7 +82,7 @@
         el: '#userPage',
         data: {
             userId: '',
-            collections: [],
+            collections: '',
         },
 
         created: function () {
@@ -88,7 +97,7 @@
                 collection.collectionName = event.target.innerText
 
             },
-            deleteCollection: function (index) {
+            deleteCollection: function (collection, index) {
                 this.$set(this.collections[index], "isDeleted", true)
                 this.collections.splice(index, 1)
                 axios.post("/user-internal/" + this.userId + "/add-collection", this.collections, {
@@ -98,21 +107,30 @@
                 }).then(r => {
                     console.log("SUCCESSFULLY DELETED COLLECTION")
                 })
+                axios.delete("/user-internal/remove-collection-images/" + collection.collectionID)
+                    .then(r => {
+                        console.log("successfully removed images")
+                    })
             },
             setShowImages: function (collection) {
                 console.log(collection.showImages)
                 this.$set(collection, "showImages", !collection.showImages)
-                axios.get("/user-internal/collections/"+collection.collectionID+"/get-images")
-                .then(r=>{
-                    console.log(r)
-                })
+                if (collection.images.length > 0) {
+                    collection.images.forEach(imageID => {
+                        axios.get("/user-internal/collections/" + collection.collectionID + "/images/" + imageID)
+                            .then(r => {
+                                console.log(r)
+                                collection.imageUrls = r.config.url
+                            })
+                    })
+                }
             },
             getCollections: function () {
-                "inside getCollections"
+                console.log("inside get collections")
                 axios.get("/user-internal/" + this.userId + "/get-collections")
                     .then(r => {
-                        let resBody = r.data
-                        this.collections = this.collections.concat(resBody.collections)
+                        console.log(r)
+                        this.collections = r.data.collections
                     })
             },
             addCollection: function () {
@@ -122,6 +140,7 @@
                     collectionID: this.generateUniqueID(),
                     collectionName: 'My Pictures',
                     images: [],
+                    imageUrls: [],
                     showImages: false
                 })
                 axios.post("/user-internal/" + this.userId + "/add-collection", this.collections, {
@@ -132,19 +151,32 @@
                     console.log("SUCCESSFULLY ADDED COLLECTION")
                 })
             },
-            saveCollection: function (collection,index) {
+            chunkArray: function (array, size) {
+                const chunked_arr = [];
+                let copied = JSON.parse(JSON.stringify(array));
+                const numOfChild = Math.ceil(copied.length / size); // Round up to the nearest integer
+                for (let i = 0; i < numOfChild; i++) {
+                    chunked_arr.push(copied.splice(0, size));
+                }
+                return chunked_arr;
+            },
+            saveCollection: function (collection, index) {
                 console.log(collection)
                 let formData = new FormData()
-                let collectionTitle = "collection-title-"+index
+                let collectionTitle = "collection-title-" + index
                 collection.collectionName = document.getElementById(collectionTitle).innerText
-                if(collection.files == undefined){
+                if (collection.files == undefined) {
                     collection.files = []
                 }
-                if(collection.files.length >0){
+                if (collection.files.length > 0) {
                     collection.files.forEach((file, index) => {
-                    formData.append("file-" + index, file)
-                    formData.append("file-"+index+'id',generateUniqueID())
-                });
+                        let imageId = this.generateUniqueID()
+                        formData.append("file-" + index, file)
+                        formData.append("file-" + index + '-id', imageId)
+                        collection.images.push(imageId)
+                    });
+                    collection.imageUrls = this.chunkArray(collection.images, 3)
+                    console.log(collection.imageUrls)
                 }
 
                 formData.append("collectionID", collection.collectionID)
@@ -202,6 +234,14 @@
 
     .card-title:focus {
         outline: none;
+    }
+
+    .displayImages {
+        width: inherit;
+    }
+
+    .imageCol {
+        margin: 1em;
     }
 </style>
 

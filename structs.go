@@ -25,7 +25,7 @@ type ImageObjRetrieve struct {
 	FileType     string `json:"type" bson:"Type"`
 	Size         int64  `json:"size" bson:"Size"`
 	CollectionID string `json:"collectionID" bson:"CollectionID"`
-	FileId       string `json:"imageId" bson:"ImageId"`
+	ImageID      string `json:"imageId" bson:"ImageId"`
 }
 
 type ImageObjSend struct {
@@ -33,12 +33,12 @@ type ImageObjSend struct {
 	FileType     string      `json:"type" bson:"Type"`
 	Size         int64       `json:"size" bson:"Size"`
 	CollectionID string      `json:"collectionID" bson:"CollectionID"`
-	FileId       string      `json:"imageId" bson:"ImageId"`
+	ImageID      string      `json:"imageId" bson:"ImageID"`
 }
 
 //Collection object
 type Collection struct {
 	CollectionID   string   `json:"collectionID" bson:"CollectionID"`
 	CollectionName string   `json:"collectionName" bson:"CollectionName"`
-	FileIds        []string `json:"fileIds" bson:"FileIds"`
+	Images         []string `json:"images" bson:"ImageIDs"`
 }
