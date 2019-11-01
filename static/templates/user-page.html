@@ -134,9 +134,11 @@
             },
             getImages: function () {
                 console.log('inside get images')
+                //TODO figure out way to only ask for new images
                 if (this.collections.length > 0) {
                     this.collections.forEach((collection,collectionIndex) => {
                         if (collection.imageIDs.length > 0) {
+                            collection.imageUrls = []//reset imageUrls 
                             collection.imageIDs.forEach(imageID => {
                                 axios.get("/user-internal/collections/" + collection.collectionID + "/images/" + imageID,
                                     {
@@ -145,16 +147,16 @@
                                     .then(response => {
                                         let reader = new window.FileReader();
                                         reader.readAsDataURL(response.data);
-                                        (function(collection,collectionIndex){
+                                        (function(collection){
                                             reader.onload = function(){
                                                 console.log('INSIDE READER: ')
-                                                if(collection[collectionIndex].imageUrls === undefined){
-                                                    collection[collectionIndex].imageUrls = []
+                                                if(collection.imageUrls === undefined){
+                                                    collection.imageUrls = []
                                                 }
-                                                collection[collectionIndex].imageUrls.push(reader.result)
+                                                collection.imageUrls.push(reader.result)
                                                 // this.$set(collection[collectionIndex],'imageUrls',collection[collectionIndex].imageUrls.push(reader.result))
                                             } 
-                                        })(this.collections,collectionIndex)                           
+                                        })(collection)                           
                                     })
                             })
                         }
@@ -223,8 +225,6 @@
                         formData.append("file-" + index + '-id', imageId)
                         collection.imageIDs.push(imageId)
                     });
-                    // collection.imageUrls = this.chunkArray(collection.images, 3)
-                    // console.log(collection.imageUrls)
                 }
                 formData.append("collectionID", collection.collectionID)
                 formData.append("fileCount", collection.files.length)
@@ -291,6 +291,10 @@
 
     .imageCol {
         margin: 1em;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        
     }
 </style>
 
