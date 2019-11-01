@@ -57,11 +57,10 @@
                             </div>
                             <div class="collapse" v-bind:id="'collapse'+index">
                                 <div class="card card-body" style="margin: 1em;margin-top: 0em;">
-                                    <b-row v-for="(url,index) in collection.imageUrls">
-                                        <b-col class="imageCol">
+                                    <b-row v-for="(chunk,index) in getImageChunk(collection)">
+                                        <b-col class="imageCol" v-for="(url,index) in chunk">
                                             <img class="displayImages"
                                                 v-bind:src="url">
-                                                {{url}}
                                         </b-col>
                                     </b-row>
                                 </div>
@@ -89,11 +88,32 @@
             let urlArray = Array.from(url)
             this.userId = urlArray[urlArray.indexOf('user') + 1]
             this.getCollections()
-            this.getImages()
+        },
+        computed:{
+            
         },
         methods: {
+            getDeepCopy:function(array){
+                let copiedArray = []
+                if(array.length > 0){
+                    array.forEach(el=>{
+                        copiedArray.push(el)
+                    })
+                }
+                return copiedArray;
+            },
+            getImageChunk:function(collection){
+                console.log('INSIDE get Image Chunk')
+                const chunked_arr = [];
+                const size = 3;
+                let copied = this.getDeepCopy(collection.imageUrls)
+                const numOfChild = Math.ceil(copied.length / size); // Round up to the nearest integer
+                for (let i = 0; i < numOfChild; i++) {
+                    chunked_arr.push(copied.splice(0, size));
+                }
+                return chunked_arr;
+            },
             setCollectionTitle: function (event, collection) {
-                console.log(event.target.innerText)
                 collection.collectionName = event.target.innerText
 
             },
@@ -115,7 +135,7 @@
             getImages: function () {
                 console.log('inside get images')
                 if (this.collections.length > 0) {
-                    this.collections.forEach(collection => {
+                    this.collections.forEach((collection,collectionIndex) => {
                         if (collection.imageIDs.length > 0) {
                             collection.imageIDs.forEach(imageID => {
                                 axios.get("/user-internal/collections/" + collection.collectionID + "/images/" + imageID,
@@ -125,19 +145,25 @@
                                     .then(response => {
                                         let reader = new window.FileReader();
                                         reader.readAsDataURL(response.data);
-                                        const pie = 'jhjjj'
-                                        console.log(collection)
-                                        reader.onload = function (fn) {
-                                            let imageDataUrl = reader.result;
-                                            fn(imageDataUrl)
-                                            console.log('pie: ',pie)
-                                        }
+                                        (function(collection,collectionIndex){
+                                            reader.onload = function(){
+                                                console.log('INSIDE READER: ')
+                                                if(collection[collectionIndex].imageUrls === undefined){
+                                                    collection[collectionIndex].imageUrls = []
+                                                }
+                                                collection[collectionIndex].imageUrls.push(reader.result)
+                                                // this.$set(collection[collectionIndex],'imageUrls',collection[collectionIndex].imageUrls.push(reader.result))
+                                            } 
+                                        })(this.collections,collectionIndex)                           
                                     })
                             })
                         }
 
                     })
                 }
+            },
+            getReaderData:function(fn){
+                let dataUrl = reader.result
             },
             setShowImages: function (collection) {
                 this.$set(collection, "showImages", !collection.showImages)
@@ -147,6 +173,12 @@
                 axios.get("/user-internal/" + this.userId + "/get-collections")
                     .then(r => {
                         this.collections = r.data.collections
+                        if(this.collections.length >0){
+                            this.collections.forEach(collection =>{
+                                collection.imageUrls = []
+                            })
+                        }
+                        this.getImages()
                     })
             },
             addCollection: function () {
@@ -178,7 +210,6 @@
                 return chunked_arr;
             },
             saveCollection: function (collection, index) {
-                console.log(collection)
                 let formData = new FormData()
                 let collectionTitle = "collection-title-" + index
                 collection.collectionName = document.getElementById(collectionTitle).innerText
@@ -195,7 +226,6 @@
                     // collection.imageUrls = this.chunkArray(collection.images, 3)
                     // console.log(collection.imageUrls)
                 }
-                this.getImages()
                 formData.append("collectionID", collection.collectionID)
                 formData.append("fileCount", collection.files.length)
                 axios.post("/user-internal/" + this.userId + "/add-images", formData,
@@ -206,6 +236,7 @@
                     }).then(r => {
                         console.log("FILES UPLOADED SUCCESSFULLY")
                         collection.files = ''
+                        this.getImages()
                     })
                 axios.post("/user-internal/" + this.userId + "/add-collection", this.collections, {
                     headers: {
@@ -255,6 +286,7 @@
 
     .displayImages {
         width: inherit;
+        align-content: center;
     }
 
     .imageCol {

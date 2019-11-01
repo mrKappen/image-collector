@@ -40,5 +40,5 @@ type ImageObjSend struct {
 type Collection struct {
 	CollectionID   string   `json:"collectionID" bson:"CollectionID"`
 	CollectionName string   `json:"collectionName" bson:"CollectionName"`
-	Images         []string `json:"images" bson:"ImageIDs"`
+	ImageIDs       []string `json:"imageIDs" bson:"ImageIDs"`
 }
