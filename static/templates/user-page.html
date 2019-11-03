@@ -58,13 +58,15 @@
                             </div>
                             <div class="collapse" v-bind:id="'collapse'+index">
                                 <div class="card card-body" style="margin: 1em;margin-top: 0em;">
-                                    <div class="box">
-                                        <div v-for="(image,imageIndex) in collection.displayImages" class="col-sm-4"style="position: relative;text-align: center;":key="image.imageID">
-                                                <i class="fas fa-times deleteCollection deleteImageButton"
-                                                    @click="deleteImage(collection,imageIndex)"
-                                                    style="position: absolute; float:center;right:1em;top: 0em;"></i>
-                                                <img class="lozad displayImages" v-bind:data-src="image.dataUrl" style="width:inherit;float: right;right:5em"/>
-                                        </div>
+                                    <div>
+                                        <transition-group name="image" class="box">
+                                                <div v-for="(image,imageIndex) in collection.displayImages" class="col-sm-4"style="position: relative;text-align: center;":key="image.imageID">
+                                                        <i class="fas fa-times deleteCollection deleteImageButton"
+                                                            @click="deleteImage(collection,imageIndex)"
+                                                            style="position: absolute; float:center;right:1em;top: 0em;"></i>
+                                                        <img class="lozad displayImages" v-bind:data-src="image.dataUrl" style="width:inherit;float: right;right:5em"/>
+                                                </div>
+                                        </transition-group>
                                     </div>
                                 </div>
                             </div>
@@ -302,6 +304,15 @@
 
     .list-enter,
     .list-leave-to {
+        opacity: 0;
+    }
+    .image-enter-active,
+    .image-leave-active {
+        transition: all 0.4s ease;
+    }
+
+    .image-enter,
+    .image-leave-to {
         opacity: 0;
     }
 
