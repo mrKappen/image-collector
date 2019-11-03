@@ -58,8 +58,8 @@
                             </div>
                             <div class="collapse" v-bind:id="'collapse'+index">
                                 <div class="card card-body" style="margin: 1em;margin-top: 0em;">
-                                    <b-row v-for="(chunk,index) in getImageChunk(collection)">
-                                        <b-col class="imageCol" v-for="(image,index) in chunk">
+                                    <b-row v-for="(chunk,chunkIndex) in collection.displayImages">
+                                        <b-col class="imageCol" v-for="(image,imageIndex) in chunk" :key="image.imageID">
                                                 <i class="fas fa-times deleteCollection deleteImageButton" @click="deleteImage(collection,image.imageID)"
                                                 style="position: absolute; float:right;right:0.5em;top: 0em;"></i>
                                                 <img class="lozad displayImages" v-bind:data-src="image.dataUrl"/>
@@ -94,9 +94,16 @@
         methods: {
             deleteImage:function(collection, toDeleteImageID){
                 console.log('inside delete image')
+                console.log(collection.imageIDs)
+                console.log(collection.displayImages)
                 let removedIndex = collection.imageIDs.indexOf(toDeleteImageID);
+                console.log(collection.imageIDs)
                 collection.imageIDs.splice(removedIndex,1);
-                axios.delete("/user-internal/images/"+toDeleteImageID)
+                console.log(collection.imageIDs)
+                collection.imageUrls.splice(removedIndex,1);
+                collection.displayImages = this.getImageChunk(collection)
+                console.log(collection.imageIDs)
+                console.log(collection.displayImages)
             },
             getDeepCopyImageDisplay: function (collection) {
                 let copiedArray = []
@@ -120,7 +127,6 @@
             },
             setCollectionTitle: function (event, collection) {
                 collection.collectionName = event.target.innerText
-
             },
             deleteCollection: function (collection, index) {
                 this.$set(this.collections[index], "isDeleted", true)
@@ -157,15 +163,13 @@
                                                 if (vm.collections[collectionIndex].imageUrls === undefined) {
                                                     vm.collections[collectionIndex].collection.imageUrls = []
                                                 }
-                                                // collection.imageUrls.$set(index,reader.result)
                                                 vm.collections[collectionIndex].imageUrls[index] = reader.result
                                                 vm.$set(vm.collections[collectionIndex], "imageUrls", collection.imageUrls)
-                                                // this.$set(collection[collectionIndex],'imageUrls',collection[collectionIndex].imageUrls.push(reader.result))
+                                                vm.$set(vm.collections[collectionIndex],"displayImages",vm.getImageChunk(vm.collections[collectionIndex]))
                                             }
                                         })(this, collectionIndex)
                                     }).then(()=>{
                                         const imgs = document.querySelectorAll('img');
-                                        // const spinners = document.querySelectorAll('.image-spinner')
                                         if(imgs.length > 0){
                                             imgs.forEach((image,index)=>{
                                                 image.onload = function(){
@@ -216,7 +220,8 @@
                     collectionName: 'My Pictures',
                     imageIDs: [],
                     imageUrls: [],
-                    showImages: false
+                    showImages: false,
+                    displayImages:[]
                 })
                 console.log(this.collections)
                 axios.post("/user-internal/" + this.userId + "/add-collection", this.collections, {
@@ -323,6 +328,7 @@
         position: relative
     }
     .displayImages{
+        width: inherit;
         opacity: 0;
         transition: all 0.3s ease;
     }
