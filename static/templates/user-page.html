@@ -58,13 +58,14 @@
                             </div>
                             <div class="collapse" v-bind:id="'collapse'+index">
                                 <div class="card card-body" style="margin: 1em;margin-top: 0em;">
-                                    <b-row v-for="(chunk,chunkIndex) in collection.displayImages">
-                                        <b-col class="imageCol" v-for="(image,imageIndex) in chunk" :key="image.imageID">
-                                                <i class="fas fa-times deleteCollection deleteImageButton" @click="deleteImage(collection,image.imageID)"
-                                                style="position: absolute; float:right;right:0.5em;top: 0em;"></i>
-                                                <img class="lozad displayImages" v-bind:data-src="image.dataUrl"/>
-                                        </b-col>
-                                    </b-row>
+                                    <div class="box">
+                                        <div v-for="(image,imageIndex) in collection.displayImages" class="col-sm-4"style="position: relative;text-align: center;":key="image.imageID">
+                                                <i class="fas fa-times deleteCollection deleteImageButton"
+                                                    @click="deleteImage(collection,imageIndex)"
+                                                    style="position: absolute; float:center;right:1em;top: 0em;"></i>
+                                                <img class="lozad displayImages" v-bind:data-src="image.dataUrl" style="width:inherit;float: right;right:5em"/>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -92,24 +93,18 @@
         computed: {
         },
         methods: {
-            deleteImage:function(collection, toDeleteImageID){
+            deleteImage: function (collection, index) {
                 console.log('inside delete image')
-                console.log(collection.imageIDs)
-                console.log(collection.displayImages)
-                let removedIndex = collection.imageIDs.indexOf(toDeleteImageID);
-                console.log(collection.imageIDs)
-                collection.imageIDs.splice(removedIndex,1);
-                console.log(collection.imageIDs)
-                collection.imageUrls.splice(removedIndex,1);
-                collection.displayImages = this.getImageChunk(collection)
-                console.log(collection.imageIDs)
-                console.log(collection.displayImages)
+                console.log('deleted index: ',index)
+                collection.imageIDs.splice(index, 1);
+                collection.imageUrls.splice(index, 1);
+                collection.displayImages = this.getDeepCopyImageDisplay(collection)
             },
             getDeepCopyImageDisplay: function (collection) {
                 let copiedArray = []
                 if (collection.imageIDs.length > 0) {
-                    collection.imageIDs.forEach((imageID,index) => {
-                        copiedArray.push({imageID:imageID,dataUrl:collection.imageUrls[index]})
+                    collection.imageIDs.forEach((imageID, index) => {
+                        copiedArray.push({ imageID: imageID, dataUrl: collection.imageUrls[index] })
                     })
                 }
                 return copiedArray;
@@ -165,14 +160,14 @@
                                                 }
                                                 vm.collections[collectionIndex].imageUrls[index] = reader.result
                                                 vm.$set(vm.collections[collectionIndex], "imageUrls", collection.imageUrls)
-                                                vm.$set(vm.collections[collectionIndex],"displayImages",vm.getImageChunk(vm.collections[collectionIndex]))
+                                                vm.$set(vm.collections[collectionIndex], "displayImages", vm.getDeepCopyImageDisplay(vm.collections[collectionIndex]))
                                             }
                                         })(this, collectionIndex)
-                                    }).then(()=>{
+                                    }).then(() => {
                                         const imgs = document.querySelectorAll('img');
-                                        if(imgs.length > 0){
-                                            imgs.forEach((image,index)=>{
-                                                image.onload = function(){
+                                        if (imgs.length > 0) {
+                                            imgs.forEach((image, index) => {
+                                                image.onload = function () {
                                                     console.log('in on load call back');
                                                     image.classList.add('imageLoaded');
                                                 }
@@ -180,7 +175,7 @@
                                         }
                                         const observer = lozad(imgs);
                                         observer.observe();
-                                        }
+                                    }
                                     )
                             })
                         }
@@ -221,7 +216,7 @@
                     imageIDs: [],
                     imageUrls: [],
                     showImages: false,
-                    displayImages:[]
+                    displayImages: []
                 })
                 console.log(this.collections)
                 axios.post("/user-internal/" + this.userId + "/add-collection", this.collections, {
@@ -327,16 +322,27 @@
         flex-wrap: wrap;
         position: relative
     }
-    .displayImages{
+
+    .displayImages {
         width: inherit;
         opacity: 0;
         transition: all 0.3s ease;
     }
-    .displayImages.imageLoaded{
+
+    .displayImages.imageLoaded {
         opacity: 1;
     }
-    i.deleteCollection.deleteImageButton{
+
+    i.deleteCollection.deleteImageButton {
         font-size: 1.25em;
+    }
+    .box{
+        display: flex;
+        flex-wrap: wrap;
+        text-align: center;
+    }
+    .box>* {
+        flex: 1 1 20em;
     }
 </style>
 
