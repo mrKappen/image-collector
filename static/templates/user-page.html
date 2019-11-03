@@ -17,12 +17,13 @@
         integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
         crossorigin="anonymous"></script>
 
-    <script src="/node_modules/axios/dist/axios.min.js"></script>
-    <script src="/node_modules/vue/dist/vue.min.js"></script>
+    <script type="text/javascript" src="/node_modules/axios/dist/axios.min.js"></script>
+    <script type="text/javascript" src="/node_modules/vue/dist/vue.min.js"></script>
     <link rel="stylesheet" href="/node_modules/bootstrap-vue/dist/bootstrap-vue.css">
     </link>
-    <script src="/node_modules/bootstrap-vue/dist/bootstrap-vue.min.js"></script>
+    <script type="text/javascript" src="/node_modules/bootstrap-vue/dist/bootstrap-vue.min.js"></script>
     <link rel="stylesheet" href="/node_modules/@fortawesome/fontawesome-free/css/all.min.css">
+    <script type="text/javascript" src="/node_modules/lozad/dist/lozad.min.js"></script>
     <!-- <script src="/static/util.js"></script> -->
     <title>Document</title>
 </head>
@@ -52,15 +53,16 @@
                                     v-bind:class="{clicked:collections[index].showImages}"
                                     @click="setShowImages(collection)">
                                     <i v-bind:class="{clicked:collections[index].showImages}" class="fas fa-angle-down"
-                                        style="font-size: 3em;"></i>
+                                        style="font-size: 2em;"></i>
                                 </b-row>
                             </div>
                             <div class="collapse" v-bind:id="'collapse'+index">
                                 <div class="card card-body" style="margin: 1em;margin-top: 0em;">
                                     <b-row v-for="(chunk,index) in getImageChunk(collection)">
-                                        <b-col class="imageCol" v-for="(url,index) in chunk">
-                                            <img class="displayImages"
-                                                v-bind:src="url">
+                                        <b-col class="imageCol" v-for="(image,index) in chunk">
+                                                <i class="fas fa-times deleteCollection deleteImageButton" @click="deleteImage(collection,image.imageID)"
+                                                style="position: absolute; float:right;right:0.5em;top: 0em;"></i>
+                                                <img class="lozad displayImages" v-bind:data-src="image.dataUrl"/>
                                         </b-col>
                                     </b-row>
                                 </div>
@@ -71,7 +73,6 @@
                     </div>
                 </div>
             </transition-group>
-
         </div>
     </div>
 </body>
@@ -82,31 +83,35 @@
             userId: '',
             collections: '',
         },
-
         created: function () {
             let url = window.location.toString().split('/')
             let urlArray = Array.from(url)
             this.userId = urlArray[urlArray.indexOf('user') + 1]
             this.getCollections()
         },
-        computed:{
-            
+        computed: {
         },
         methods: {
-            getDeepCopy:function(array){
+            deleteImage:function(collection, toDeleteImageID){
+                console.log('inside delete image')
+                let removedIndex = collection.imageIDs.indexOf(toDeleteImageID);
+                collection.imageIDs.splice(removedIndex,1);
+                axios.delete("/user-internal/images/"+toDeleteImageID)
+            },
+            getDeepCopyImageDisplay: function (collection) {
                 let copiedArray = []
-                if(array.length > 0){
-                    array.forEach(el=>{
-                        copiedArray.push(el)
+                if (collection.imageIDs.length > 0) {
+                    collection.imageIDs.forEach((imageID,index) => {
+                        copiedArray.push({imageID:imageID,dataUrl:collection.imageUrls[index]})
                     })
                 }
                 return copiedArray;
             },
-            getImageChunk:function(collection){
+            getImageChunk: function (collection) {
                 console.log('INSIDE get Image Chunk')
                 const chunked_arr = [];
                 const size = 3;
-                let copied = this.getDeepCopy(collection.imageUrls)
+                let copied = this.getDeepCopyImageDisplay(collection)
                 const numOfChild = Math.ceil(copied.length / size); // Round up to the nearest integer
                 for (let i = 0; i < numOfChild; i++) {
                     chunked_arr.push(copied.splice(0, size));
@@ -136,10 +141,9 @@
                 console.log('inside get images')
                 //TODO figure out way to only ask for new images
                 if (this.collections.length > 0) {
-                    this.collections.forEach((collection,collectionIndex) => {
+                    this.collections.forEach((collection, collectionIndex) => {
                         if (collection.imageIDs.length > 0) {
-                            collection.imageUrls = []//reset imageUrls 
-                            collection.imageIDs.forEach(imageID => {
+                            collection.imageIDs.forEach((imageID, index) => {
                                 axios.get("/user-internal/collections/" + collection.collectionID + "/images/" + imageID,
                                     {
                                         responseType: 'blob'
@@ -147,24 +151,40 @@
                                     .then(response => {
                                         let reader = new window.FileReader();
                                         reader.readAsDataURL(response.data);
-                                        (function(collection){
-                                            reader.onload = function(){
+                                        (function (vm, collectionIndex) {
+                                            reader.onload = function () {
                                                 console.log('INSIDE READER: ')
-                                                if(collection.imageUrls === undefined){
-                                                    collection.imageUrls = []
+                                                if (vm.collections[collectionIndex].imageUrls === undefined) {
+                                                    vm.collections[collectionIndex].collection.imageUrls = []
                                                 }
-                                                collection.imageUrls.push(reader.result)
+                                                // collection.imageUrls.$set(index,reader.result)
+                                                vm.collections[collectionIndex].imageUrls[index] = reader.result
+                                                vm.$set(vm.collections[collectionIndex], "imageUrls", collection.imageUrls)
                                                 // this.$set(collection[collectionIndex],'imageUrls',collection[collectionIndex].imageUrls.push(reader.result))
-                                            } 
-                                        })(collection)                           
-                                    })
+                                            }
+                                        })(this, collectionIndex)
+                                    }).then(()=>{
+                                        const imgs = document.querySelectorAll('img');
+                                        // const spinners = document.querySelectorAll('.image-spinner')
+                                        if(imgs.length > 0){
+                                            imgs.forEach((image,index)=>{
+                                                image.onload = function(){
+                                                    console.log('in on load call back');
+                                                    image.classList.add('imageLoaded');
+                                                }
+                                            })
+                                        }
+                                        const observer = lozad(imgs);
+                                        observer.observe();
+                                        }
+                                    )
                             })
                         }
 
                     })
                 }
             },
-            getReaderData:function(fn){
+            getReaderData: function (fn) {
                 let dataUrl = reader.result
             },
             setShowImages: function (collection) {
@@ -175,9 +195,14 @@
                 axios.get("/user-internal/" + this.userId + "/get-collections")
                     .then(r => {
                         this.collections = r.data.collections
-                        if(this.collections.length >0){
-                            this.collections.forEach(collection =>{
+                        if (this.collections.length > 0) {
+                            this.collections.forEach(collection => {
                                 collection.imageUrls = []
+                                if (collection.imageIDs.length > 0) {
+                                    for (let k = 0; k < collection.imageIDs.length; k++) {
+                                        collection.imageUrls.push("#")
+                                    }
+                                }
                             })
                         }
                         this.getImages()
@@ -285,16 +310,27 @@
     }
 
     .displayImages {
+        margin-top: 2em;
+        margin-bottom: 2em;
         width: inherit;
         align-content: center;
     }
 
     .imageCol {
-        margin: 1em;
         display: flex;
         align-items: center;
         flex-wrap: wrap;
-        
+        position: relative
+    }
+    .displayImages{
+        opacity: 0;
+        transition: all 0.3s ease;
+    }
+    .displayImages.imageLoaded{
+        opacity: 1;
+    }
+    i.deleteCollection.deleteImageButton{
+        font-size: 1.25em;
     }
 </style>
 
