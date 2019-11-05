@@ -24,8 +24,18 @@
     <script type="text/javascript" src="/node_modules/bootstrap-vue/dist/bootstrap-vue.min.js"></script>
     <link rel="stylesheet" href="/node_modules/@fortawesome/fontawesome-free/css/all.min.css">
     <script type="text/javascript" src="/node_modules/lozad/dist/lozad.min.js"></script>
-    <!-- <script src="/static/util.js"></script> -->
-    <title>Document</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-fileinput/5.0.6/css/fileinput.min.css" media="all"
+        rel="stylesheet" type="text/css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-fileinput/5.0.6/js/plugins/piexif.min.js"
+        type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-fileinput/5.0.6/js/plugins/sortable.min.js"
+        type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-fileinput/5.0.6/js/plugins/purify.min.js"
+        type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-fileinput/5.0.6/js/fileinput.min.js"></script>
+    <title>Image Collector</title>
 </head>
 
 <body>
@@ -35,17 +45,22 @@
                 Collection</button>
             <transition-group name="list">
                 <div v-for="(collection,index) in collections" style="margin: 1em;position: relative;"
-                    v-bind:key="collection">
+                    :key="collection.collectionID">
                     <div>
                         <div class="card" variant="light">
                             <i class="fas fa-times deleteCollection"
                                 style="position: absolute; right: 0.25em;top:0.25em"
                                 @click="deleteCollection(collection,index)"></i>
+
                             <div class="card-body">
                                 <h4 class="card-title" contenteditable v-bind:id="'collection-title-'+index">
                                     {{collections[index].collectionName}}</h4>
                                 <b-form-file accept="image/*" multiple v-model="collection.files"
-                                    placeholder="Choose an image or drop it here">
+                                    :file-name-formatter="formatNames" placeholder="Choose an image or drop it here"
+                                    @change="setUpPreview($event, index)">
+                                    <!-- <input id="input-b3" name="input-b3[]" type="file" class="file" multiple
+                                     data-show-upload="false" data-show-caption="true"
+                                    data-msg-placeholder="Select {files} for upload..."> -->
                             </div>
                             <div data-toggle="collapse" role="button" v-bind:data-target="'#collapse'+index"
                                 aria-expanded="false" v-bind:aria-controls="'collapse'+index">
@@ -60,12 +75,14 @@
                                 <div class="card card-body" style="margin: 1em;margin-top: 0em;">
                                     <div>
                                         <transition-group name="image" class="box">
-                                                <div v-for="(image,imageIndex) in collection.displayImages" class="col-sm-4"style="position: relative;text-align: center;":key="image.imageID">
-                                                        <i class="fas fa-times deleteCollection deleteImageButton"
-                                                            @click="deleteImage(collection,imageIndex)"
-                                                            style="position: absolute; float:center;right:1em;top: 0em;"></i>
-                                                        <img class="lozad displayImages" v-bind:data-src="image.dataUrl" style="width:inherit;float: right;right:5em"/>
-                                                </div>
+                                            <div v-for="(image,imageIndex) in collection.displayImages" class="col-sm-4"
+                                                style="position: relative;text-align: center;" :key="image.imageID">
+                                                <i class="fas fa-times deleteCollection deleteImageButton"
+                                                    @click="deleteImage(collection,imageIndex)"
+                                                    style="position: absolute; float:center;right:1em;top: 0em;"></i>
+                                                <img class="lozad displayImages" v-bind:data-src="image.dataUrl"
+                                                    style="width:inherit;float: right;right:5em" />
+                                            </div>
                                         </transition-group>
                                     </div>
                                 </div>
@@ -95,12 +112,66 @@
         computed: {
         },
         methods: {
+            setUpPreview: function (event, collectionIndex) {
+                console.log('in preview!')
+                console.log(event)
+                if (event.target.files.length > 0) {
+                    console.log('here')
+                    this.$set(this.collections[collectionIndex], "showPreview", true);
+                } else {
+                    this.$set(this.collections[collectionIndex], "showPreview", false);
+                }
+                let element = document.getElementById('imagePreview' + collectionIndex);
+                console.log(element)
+                let parent = document.createElement('div');
+                parent.classList.add('col-sm-4')
+                parent.setAttribute("style", "position: relative;text-align: center;")
+                for (let i = 0; i < event.target.files.length; i++) {
+                    let reader = new window.FileReader();
+                    // imgTag.classList.add('lozad')
+                    let file = event.target.files[i]
+                    reader.readAsDataURL(file);
+                    reader.onload = function () {
+                        let url = reader.result
+                        let imgTag = document.createElement('img')
+                        imgTag.classList.add('displayImages')
+                        imgTag.src = url
+                        imgTag.setAttribute("style", "width:inherit;float: right;right:5em")
+                        parent.appendChild(imgTag)
+                    }
+                }
+                element.appendChild(parent)
+                // if(event.target.files.length > 0){
+                //     Array.from(event.target.files).forEach(file => {
+                //         let imgTag = document.createElement('img')
+                //         imgTag.classList.add('lozad')
+                //         imgTag.classList.add('displayImages')
+                //         imgTag.setAttribute("data-src",URL.createObjectURL(file))
+                //         imgTag.setAttribute("style","width:inherit;float: right;right:5em")
+                //         parent.appendChild(imgTag)
+                //         const observer = new lozad(imgTag)
+                //         observer.observe()
+                //     })
+                // }
+            },
+            formatNames(files) {
+                if (files.length === 1) {
+                    return files[0].name
+                } else {
+                    return `${files.length} files selected`
+                }
+            },
             deleteImage: function (collection, index) {
                 console.log('inside delete image')
-                console.log('deleted index: ',index)
+                console.log('deleted index: ', index)
+                if (collection.deletedImages == undefined) {
+                    collection.deletedImages = []
+                }
+                collection.deletedImages.push(collection.imageIDs[index])
                 collection.imageIDs.splice(index, 1);
                 collection.imageUrls.splice(index, 1);
                 collection.displayImages = this.getDeepCopyImageDisplay(collection)
+
             },
             getDeepCopyImageDisplay: function (collection) {
                 let copiedArray = []
@@ -199,6 +270,7 @@
                         if (this.collections.length > 0) {
                             this.collections.forEach(collection => {
                                 collection.imageUrls = []
+                                collection.files = []
                                 if (collection.imageIDs.length > 0) {
                                     for (let k = 0; k < collection.imageIDs.length; k++) {
                                         collection.imageUrls.push("#")
@@ -218,7 +290,8 @@
                     imageIDs: [],
                     imageUrls: [],
                     showImages: false,
-                    displayImages: []
+                    displayImages: [],
+                    files: []
                 })
                 console.log(this.collections)
                 axios.post("/user-internal/" + this.userId + "/add-collection", this.collections, {
@@ -272,6 +345,17 @@
                 }).then(r => {
                     console.log("SUCCESSFULLY ADDED COLLECTION")
                 })
+                if (collection.deletedImages) {
+                    collection.deletedImages.forEach(imageID => {
+                        console.log('collection.deletedImages: ,', collection.deletedImages)
+                        axios.delete("/user-internal/remove-image/collections/" + collection.collectionID + "/images/"+imageID)
+                            .then(r => {
+                                collection.deletedImages = []
+                                console.log('deleted images')
+                            })
+                    })
+
+                }
             },
             generateUniqueID: function () {
                 return (new Date()).valueOf().toString(16) + Math.random(10).toString(16).substring(2);
@@ -306,6 +390,7 @@
     .list-leave-to {
         opacity: 0;
     }
+
     .image-enter-active,
     .image-leave-active {
         transition: all 0.4s ease;
@@ -347,13 +432,25 @@
     i.deleteCollection.deleteImageButton {
         font-size: 1.25em;
     }
-    .box{
+
+    .box {
         display: flex;
         flex-wrap: wrap;
         text-align: center;
     }
+
     .box>* {
         flex: 1 1 20em;
+    }
+
+    .boxPreview {
+        display: flex;
+        flex-wrap: wrap;
+        text-align: center;
+    }
+
+    .boxPreview>* {
+        flex: 1 1 5em;
     }
 </style>
 

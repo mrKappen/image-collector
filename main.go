@@ -51,11 +51,35 @@ func main() {
 	router.HandleFunc("/user-internal/{userId}/get-collections", getImageCollections).Methods("GET")
 	router.HandleFunc("/user-internal/collections/{collectionId}/images/{imageId}", getImages).Methods("GET")
 	router.HandleFunc("/user-internal/remove-collection-images/{collectionId}", removeImages).Methods("DELETE")
+	router.HandleFunc("/user-internal/remove-image/collections/{collectionID}/images/{imageID}", removeSpecificImages).Methods("DELETE")
 	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	router.PathPrefix("/node_modules/").Handler(http.StripPrefix("/node_modules/", http.FileServer(http.Dir("node_modules"))))
 	fmt.Println("**************STARTING THE SERVER**************")
 	err := http.ListenAndServe(":80", router)
 	fmt.Println(err)
+}
+
+func removeSpecificImages(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("here!")
+	// collectionID := (mux.Vars(r))["collecitonId"]
+	imageID := (mux.Vars(r))["imageID"]
+	images := getCollection("images")
+	filter := bson.D{{"ImageID", imageID}}
+	_, err := images.DeleteOne(context.TODO(), filter)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	http.Error(w, "Success", 200)
+}
+func performImageRemove(imageID, collectionID string, wg *sync.WaitGroup, operations *[]mongo.WriteModel) {
+	operation := mongo.NewDeleteOneModel()
+	filter := bson.D{{"ImageID", imageID}}
+	operation.SetFilter(filter)
+	mutex.Lock()
+	*operations = append(*operations, operation)
+	mutex.Unlock()
+	wg.Done()
 }
 func removeImages(w http.ResponseWriter, r *http.Request) {
 	collectionID := (mux.Vars(r))["collectionId"]
