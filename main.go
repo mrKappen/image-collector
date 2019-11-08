@@ -43,12 +43,14 @@ func main() {
 	router.HandleFunc("/register", signUp).Methods("POST")
 	router.HandleFunc("/checkLogin", checkLogin).Methods("POST")
 	router.HandleFunc("/user/{userId}", getUser).Methods("GET")
+	router.HandleFunc("/shared/{userId}/{collectionID}", getSharedCollection).Methods("GET")
 	//INTERNAL
 	router.HandleFunc("/user-internal/{email}", getUserByEmail).Methods("PUT")
 	router.HandleFunc("/user-data-internal/{userId}", getUserDataByID).Methods("GET")
 	router.HandleFunc("/user-internal/{userId}/add-collection", addCollection).Methods("POST")
 	router.HandleFunc("/user-internal/{userId}/add-images", uploadImages).Methods("POST")
 	router.HandleFunc("/user-internal/{userId}/get-collections", getImageCollections).Methods("GET")
+	router.HandleFunc("/user-internal/{userId}/get-collections/{collectionId}", getSharedCollectionContent).Methods("GET")
 	router.HandleFunc("/user-internal/collections/{collectionId}/images/{imageId}", getImages).Methods("GET")
 	router.HandleFunc("/user-internal/remove-collection-images/{collectionId}", removeImages).Methods("DELETE")
 	router.HandleFunc("/user-internal/remove-image/collections/{collectionID}/images/{imageID}", removeSpecificImages).Methods("DELETE")
@@ -57,6 +59,43 @@ func main() {
 	fmt.Println("**************STARTING THE SERVER**************")
 	err := http.ListenAndServe(":80", router)
 	fmt.Println(err)
+}
+func getSharedCollectionContent(w http.ResponseWriter, r *http.Request) {
+	userId := (mux.Vars(r))["userId"]
+	collectionID := (mux.Vars(r))["collectionId"]
+	var userDataObj UserData
+	filter := bson.D{{"UserID", userId}}
+	userData := getCollection("userData")
+	userData.FindOne(context.TODO(), filter).Decode(&userDataObj)
+	for _, collection := range userDataObj.Collections {
+		if collection.CollectionID == collectionID {
+			v, err := json.Marshal(collection)
+			if err != nil {
+				http.Error(w, err.Error(), 400)
+				return
+			}
+			w.Header().Add("Content-type", "application/json")
+			w.Write(v)
+			return
+		}
+	}
+	http.Error(w, "no collections found!", 404)
+}
+func getSharedCollection(w http.ResponseWriter, r *http.Request) {
+	sharedPage, _ := os.Open("static/templates/shared-collection.html")
+	fileSize, err := sharedPage.Stat()
+	sharedPageData := make([]byte, fileSize.Size())
+	if err != nil {
+		fmt.Println("Error: ", err.Error())
+		return
+	}
+	_, err = sharedPage.Read(sharedPageData)
+	if err != nil {
+		fmt.Println("Error: ", err.Error())
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write(sharedPageData)
 }
 
 func removeSpecificImages(w http.ResponseWriter, r *http.Request) {
@@ -150,11 +189,6 @@ func register(w http.ResponseWriter, r *http.Request) {
 	t.Execute(w, nil)
 }
 func getUser(w http.ResponseWriter, r *http.Request) {
-	// t, _ := template.ParseFiles("static/templates/user-page.html")
-	// err := t.Execute(w, nil)
-	// if err != nil {
-	// 	fmt.Println(err.Error())
-	// }
 	userPage, _ := os.Open("static/templates/user-page.html")
 	fileSize, err := userPage.Stat()
 	userPageData := make([]byte, fileSize.Size())

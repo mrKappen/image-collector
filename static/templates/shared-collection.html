@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+        integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+        integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+        crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+        crossorigin="anonymous"></script>
+
+    <script type="text/javascript" src="/node_modules/axios/dist/axios.min.js"></script>
+    <script type="text/javascript" src="/node_modules/vue/dist/vue.min.js"></script>
+    <link rel="stylesheet" href="/node_modules/bootstrap-vue/dist/bootstrap-vue.css">
+    </link>
+    <script type="text/javascript" src="/node_modules/bootstrap-vue/dist/bootstrap-vue.min.js"></script>
+    <link rel="stylesheet" href="/node_modules/@fortawesome/fontawesome-free/css/all.min.css">
+    <title></title>
+</head>
+
+<body>
+    <div id="sharedPage">
+        <div class="container" style="margin-top:2em">
+            <div>
+                <transition-group name="image" class="box">
+                    <div v-for="(image,imageIndex) in collection.displayImages" class="col-sm-4"
+                        style="position: relative;text-align: center;" :key="image.imageID">
+                        <img v-bind:id="'image'+imageIndex" class="lazy" v-bind:data-src="image.dataUrl"
+                            style="width:inherit;float: right;right:5em; margin: 2em;margin-bottom: 2em;" />
+                    </div>
+                </transition-group>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload@12.3.0/dist/lazyload.min.js"></script>
+</body>
+<script type="module">
+    var vm = new Vue({
+        el: '#sharedPage',
+        data: {
+            userID: '',
+            collectionID: '',
+            collection: ''
+        },
+        created() {
+            let url = window.location.toString().split('/')
+            let urlArray = Array.from(url)
+            this.userID = urlArray[urlArray.indexOf('shared') + 1]
+            this.collectionID = urlArray[urlArray.indexOf('shared') + 2]
+            this.getCollection()
+        },
+        methods: {
+            getCollection: function () {
+                console.log("inside get collection")
+                axios.get("/user-internal/" + this.userID + "/get-collections/" + this.collectionID)
+                    .then(r => {
+                        console.log(r)
+                        this.collection = r.data
+                        this.collection.imageUrls = []
+                        this.collection.files = []
+                        // if (this.collection.imageIDs.length > 0) {
+                        //     for (let k = 0; k < this.collection.imageIDs.length; k++) {
+                        //         this.collection.imageUrls.push("#")
+                        //     }
+                        // }
+                        this.getImages()
+                        // let vm = this
+                        // async function dothings() {
+                        //     await vm.getImages()
+                        //     let lazyloadInstance = new LazyLoad({
+                        //         elements_selector: ".lazy"
+                        //     })
+                        // }
+                        // dothings()  
+                    })
+            },
+            getDeepCopyImageDisplay: function (collection) {
+                let copiedArray = []
+                if (collection.imageIDs.length > 0) {
+                    collection.imageIDs.forEach((imageID, index) => {
+                        copiedArray.push({ imageID: imageID, dataUrl: collection.imageUrls[index] })
+                    })
+                }
+                return copiedArray;
+            },
+            getImages: function () {
+                console.log('inside get images')
+                //TODO figure out way to only ask for new images
+                let collection = this.collection
+                let vm = this
+                if (collection.imageIDs.length > 0) {
+                    collection.imageIDs.forEach((imageID, index) => {
+                        axios.get("/user-internal/collections/" + collection.collectionID + "/images/" + imageID,
+                            {
+                                responseType: 'blob'
+                            })
+                            .then(response => {
+                                let reader = new window.FileReader();
+                                reader.readAsDataURL(response.data);
+                                reader.onload = function () {
+                                    console.log('INSIDE READER: ')
+                                    if (collection.imageUrls === undefined) {
+                                        collection.imageUrls = []
+                                    }
+                                    collection.imageUrls.push(reader.result)
+                                    vm.$set(vm.collection, "imageUrls", collection.imageUrls)
+                                    vm.$set(vm.collection, "displayImages", vm.getDeepCopyImageDisplay(vm.collection))
+                                }
+                            }).then(() => {
+                                const imgs = document.querySelectorAll('img');
+
+                                if (imgs.length > 0) {
+                                    imgs.forEach((image, index) => {
+                                        image.onload = function () {
+                                            console.log('in on load call back', image.complete);
+                                            image.classList.add('imageLoaded');
+                                        }
+                                        let timer = setInterval(function () {
+                                            let lazyloadInstance = new LazyLoad({
+                                                elements_selector: ".lazy"
+                                            })
+                                            // console.log('in timer: ',image.complete)
+                                            // if(lazyloadInstance){
+                                            lazyloadInstance.update()
+                                            // }
+                                            // if(image.complete){
+                                            //     clearInterval(timer)
+                                            // }
+                                        }, 100)
+                                    })
+                                }
+                            })
+                    })
+                }
+
+            },
+        }
+    })
+    export default { vm }
+</script>
+<style>
+    .box {
+        display: flex;
+        flex-wrap: wrap;
+        text-align: center;
+    }
+
+    .box>* {
+        flex: 1 1 20em;
+    }
+
+    .displayImages {
+        width: inherit;
+        opacity: 0;
+        transition: all 0.3s ease;
+    }
+
+    .displayImages.imageLoaded {
+        opacity: 1;
+    }
+</style>
+
+</html>
