@@ -46,10 +46,7 @@
                                     {{collections[index].collectionName}}</h4>
                                 <b-form-file accept="image/*" multiple v-model="collection.files"
                                     :file-name-formatter="formatNames" placeholder="Choose an image or drop it here"
-                                    @change="setUpPreview($event, index)">
-                                    <!-- <input id="input-b3" name="input-b3[]" type="file" class="file" multiple
-                                     data-show-upload="false" data-show-caption="true"
-                                    data-msg-placeholder="Select {files} for upload..."> -->
+                                    @input="setUpPreview($event, collection,index)">
                             </div>
                             <div data-toggle="collapse" role="button" v-bind:data-target="'#collapse'+index"
                                 aria-expanded="false" v-bind:aria-controls="'collapse'+index">
@@ -62,32 +59,44 @@
                             </div>
                             <div class="collapse" v-bind:id="'collapse'+index">
                                 <div class="card card-body" style="margin: 1em;margin-top: 0em;">
-                                    <div>
+                                    <!-- <div>
                                         <transition-group name="image" class="box">
-                                            <div v-for="(image,imageIndex) in collection.displayImages" class="col-sm-4"
+                                            <div v-for="(image,imageIndex) in collection.displayImages" v-bind:id="'collectionImages'+index"class="col-sm-4"
                                                 style="position: relative;text-align: center;" :key="image.imageID">
                                                 <i class="fas fa-times deleteCollection deleteImageButton"
                                                     @click="deleteImage(collection,imageIndex)"
                                                     style="position: absolute; float:center;right:1em;top: 0em;"></i>
-                                                <img class="lozad displayImages" v-bind:data-src="image.dataUrl"
+                                                <img class="lazy displayImages" v-bind:data-src="image.dataUrl"
                                                     style="width:inherit;float: right;right:5em" />
                                             </div>
                                         </transition-group>
+                                    </div> -->
+                                    <div class="container">
+                                        <div v-bind:id="'collectionImages'+index" class="grid">
+                                            <div v-for="(image,imageIndex) in collection.displayImages" class="cell"
+                                                :key="image.imageID">
+                                                <i class="fas fa-times deleteCollection deleteImageButton"
+                                                    @click="deleteImage(collection,imageIndex)"></i>
+                                                <img class="lazy responsive-image" v-bind:data-src="image.dataUrl" />
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <button class="btn btn-outline-success" style="margin-top: 0.5em;"
                             @click="saveCollection(collection,index)">Save Changes</button>
-                        <button class="btn btn-outline-info" style="margin-top: 0.5em;" @click="showTooltipForLink(index)" v-bind:id="'sharedBtn'+index">Share Collection</button>
+                        <button class="btn btn-outline-info" style="margin-top: 0.5em;"
+                            @click="showTooltipForLink(index)" v-bind:id="'sharedBtn'+index">Share Collection</button>
                         <b-tooltip v-bind:target="'sharedBtn'+index" placement="right" triggers="manual">
-                                A shareable link has been copied to your clickboard!
+                            A shareable link has been copied to your clickboard!
                         </b-tooltip>
                     </div>
                 </div>
             </transition-group>
         </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload@12.3.0/dist/lazyload.min.js"></script>
 </body>
 <script type="module">
     var vm = new Vue({
@@ -105,18 +114,18 @@
         computed: {
         },
         methods: {
-            showTooltipForLink:function(index){
+            showTooltipForLink: function (index) {
                 let target = 'sharedBtn' + index
                 this.$root.$emit('bv::show::tooltip', target)
                 let vm = this;
-                setTimeout(function(){
+                setTimeout(function () {
                     vm.$root.$emit('bv::hide::tooltip', target)
-                },800)
-                let link = window.location.origin + "/shared/"+this.userId+"/"+this.collections[index].collectionID;
+                }, 800)
+                let link = window.location.origin + "/shared/" + this.userId + "/" + this.collections[index].collectionID;
                 let textArea = document.createElement('input');
                 document.body.appendChild(textArea)
-                textArea.setAttribute('value',link)
-                textArea.setAttribute('type','text')
+                textArea.setAttribute('value', link)
+                textArea.setAttribute('type', 'text')
                 textArea.select();
                 textArea.setSelectionRange(0, 99999);
                 console.log(textArea)
@@ -124,35 +133,48 @@
                 document.execCommand("copy");
                 textArea.parentNode.removeChild(textArea)
             },
-            setUpPreview: function (event, collectionIndex) {
+            setUpPreview: function (event, collection, index) {
                 console.log('in preview!')
                 console.log(event)
-                if (event.target.files.length > 0) {
-                    console.log('here')
-                    this.$set(this.collections[collectionIndex], "showPreview", true);
-                } else {
-                    this.$set(this.collections[collectionIndex], "showPreview", false);
+                let parent = document.querySelector("#collectionImages" + index);
+                let vm = this;
+                if (event.length > 0) {
+                    event.forEach((file, fileIndex) => {
+                        let reader = new window.FileReader();
+                        reader.readAsDataURL(file);
+                        reader.onload = function () {
+                            console.log('in call back!',file)
+                            let image = document.createElement('img');
+                            let closeIcon = document.createElement('i');
+                            closeIcon.setAttribute('class', 'fas fa-times deleteCollection deleteImageButton');
+                            let parentCell = document.createElement('div');
+                            parentCell.classList.add("cell")
+                            image.setAttribute('data-src', reader.result);
+                            image.classList.add('lazy');
+                            image.classList.add('displayImages');
+                            image.classList.add('responsive-image')
+                            parentCell.appendChild(closeIcon)
+                            parentCell.appendChild(image)
+                            parent.appendChild(parentCell);
+                            closeIcon.addEventListener("click", event => {
+                                    console.log("CLICKED an ADDED ITEM", event)
+                                    let removedIndex = collection.files.indexOf(file)
+                                    collection.files.splice(removedIndex,1);
+                                    parentCell.parentNode.removeChild(parentCell)
+                            })
+                            // vm.$set(vm.collections[collectionIndex], "imageUrls", collection.imageUrls)
+                            // vm.$set(vm.collections[collectionIndex], "displayImages", vm.getDeepCopyImageDisplay(vm.collections[collectionIndex]))
+                            let lazyloadInstance = new LazyLoad({
+                                elements_selector: ".lazy"
+                            })
+                            image.onload = function () {
+                                console.log('in on load call back', image.complete);
+                                image.classList.add('imageLoaded');
+                            }
+                        }
+                    })
                 }
-                let element = document.getElementById('imagePreview' + collectionIndex);
-                console.log(element)
-                let parent = document.createElement('div');
-                parent.classList.add('col-sm-4')
-                parent.setAttribute("style", "position: relative;text-align: center;")
-                for (let i = 0; i < event.target.files.length; i++) {
-                    let reader = new window.FileReader();
-                    // imgTag.classList.add('lozad')
-                    let file = event.target.files[i]
-                    reader.readAsDataURL(file);
-                    reader.onload = function () {
-                        let url = reader.result
-                        let imgTag = document.createElement('img')
-                        imgTag.classList.add('displayImages')
-                        imgTag.src = url
-                        imgTag.setAttribute("style", "width:inherit;float: right;right:5em")
-                        parent.appendChild(imgTag)
-                    }
-                }
-                element.appendChild(parent)
+
             },
             formatNames(files) {
                 if (files.length === 1) {
@@ -235,21 +257,20 @@
                                                 vm.$set(vm.collections[collectionIndex], "imageUrls", collection.imageUrls)
                                                 vm.$set(vm.collections[collectionIndex], "displayImages", vm.getDeepCopyImageDisplay(vm.collections[collectionIndex]))
                                             }
-                                        })(this, collectionIndex)
-                                    }).then(() => {
-                                        const imgs = document.querySelectorAll('img');
-                                        if (imgs.length > 0) {
-                                            imgs.forEach((image, index) => {
-                                                image.onload = function () {
-                                                    console.log('in on load call back');
-                                                    image.classList.add('imageLoaded');
-                                                }
+                                            const imgs = document.querySelectorAll('img');
+                                            let lazyloadInstance = new LazyLoad({
+                                                elements_selector: ".lazy"
                                             })
-                                        }
-                                        const observer = lozad(imgs);
-                                        observer.observe();
-                                    }
-                                    )
+                                            if (imgs.length > 0) {
+                                                imgs.forEach((image, index) => {
+                                                    image.onload = function () {
+                                                        console.log('in on load call back');
+                                                        image.classList.add('imageLoaded');
+                                                    }
+                                                })
+                                            }
+                                        })(this, collectionIndex)
+                                    })
                             })
                         }
 
@@ -266,9 +287,9 @@
                 console.log("inside get collections")
                 axios.get("/user-internal/" + this.userId + "/get-collections")
                     .then(r => {
-                        if(r.data.collections){
+                        if (r.data.collections) {
                             this.collections = r.data.collections
-                        }else{
+                        } else {
                             this.collections = []
                         }
                         if (this.collections.length > 0) {
@@ -352,7 +373,7 @@
                 if (collection.deletedImages) {
                     collection.deletedImages.forEach(imageID => {
                         console.log('collection.deletedImages: ,', collection.deletedImages)
-                        axios.delete("/user-internal/remove-image/collections/" + collection.collectionID + "/images/"+imageID)
+                        axios.delete("/user-internal/remove-image/collections/" + collection.collectionID + "/images/" + imageID)
                             .then(r => {
                                 collection.deletedImages = []
                                 console.log('deleted images')
@@ -362,16 +383,17 @@
                 }
             },
             generateUniqueID: function () {
-                return (new Date()).valueOf().toString(16) + Math.random(10).toString(16).substring(2);
+                return (Math.random(10).toString(16).substring(2) + Math.random(10).toString(16).substring(2));
             }
         }
     })
     export default { vm }
 </script>
 <style>
-    .btn:focus{
+    .btn:focus {
         outline: none !important;
     }
+
     .arrow i {
         transition: all 0.4s ease;
     }
@@ -412,13 +434,6 @@
         outline: none;
     }
 
-    .displayImages {
-        margin-top: 2em;
-        margin-bottom: 2em;
-        width: inherit;
-        align-content: center;
-    }
-
     .imageCol {
         display: flex;
         align-items: center;
@@ -426,8 +441,44 @@
         position: relative
     }
 
+    i.deleteCollection.deleteImageButton {
+        font-size: 1.25em;
+        position: absolute;
+        float: center;
+        right: 0em;
+        top: -1em;
+    }
+
+    .container {
+        margin: 0 auto;
+        max-width: 1200px;
+        padding: 0 1rem;
+    }
+
+    .responsive-image {
+        max-width: 100%;
+    }
+
+    .cell {
+        position: relative;
+        display: block;
+        margin: 1rem
+    }
+
+    @media screen and (min-width: 600px) {
+        .grid {
+            display: flex;
+            flex-wrap: wrap;
+            flex-direction: row;
+            align-items: center;
+        }
+
+        .cell {
+            width: calc(50%-2rem)
+        }
+    }
+
     .displayImages {
-        width: inherit;
         opacity: 0;
         transition: all 0.3s ease;
     }
@@ -436,28 +487,10 @@
         opacity: 1;
     }
 
-    i.deleteCollection.deleteImageButton {
-        font-size: 1.25em;
-    }
-
-    .box {
-        display: flex;
-        flex-wrap: wrap;
-        text-align: center;
-    }
-
-    .box>* {
-        flex: 1 1 20em;
-    }
-
-    .boxPreview {
-        display: flex;
-        flex-wrap: wrap;
-        text-align: center;
-    }
-
-    .boxPreview>* {
-        flex: 1 1 5em;
+    @media screen and (min-width: 1000px) {
+        .cell {
+            width: calc(100%/3 - 2rem);
+        }
     }
 </style>
 
