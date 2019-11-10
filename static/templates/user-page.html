@@ -138,8 +138,12 @@
                 console.log(event)
                 let parent = document.querySelector("#collectionImages" + index);
                 let vm = this;
+                if(collection.addedFiles === undefined){
+                    collection.addedFiles = []
+                }
                 if (event.length > 0) {
                     event.forEach((file, fileIndex) => {
+                        collection.addedFiles.push(file);
                         let reader = new window.FileReader();
                         reader.readAsDataURL(file);
                         reader.onload = function () {
@@ -158,8 +162,8 @@
                             parent.appendChild(parentCell);
                             closeIcon.addEventListener("click", event => {
                                     console.log("CLICKED an ADDED ITEM", event)
-                                    let removedIndex = collection.files.indexOf(file)
-                                    collection.files.splice(removedIndex,1);
+                                    let removedIndex = collection.addedFiles.indexOf(file)
+                                    collection.addedFiles.splice(removedIndex,1);
                                     parentCell.parentNode.removeChild(parentCell)
                             })
                             // vm.$set(vm.collections[collectionIndex], "imageUrls", collection.imageUrls)
@@ -343,8 +347,8 @@
                 if (collection.files == undefined) {
                     collection.files = []
                 }
-                if (collection.files.length > 0) {
-                    collection.files.forEach((file, index) => {
+                if (collection.addedFiles.length > 0) {
+                    collection.addedFiles.forEach((file, index) => {
                         let imageId = this.generateUniqueID()
                         formData.append("file-" + index, file)
                         formData.append("file-" + index + '-id', imageId)
@@ -352,7 +356,7 @@
                     });
                 }
                 formData.append("collectionID", collection.collectionID)
-                formData.append("fileCount", collection.files.length)
+                formData.append("fileCount", collection.addedFiles.length)
                 axios.post("/user-internal/" + this.userId + "/add-images", formData,
                     {
                         headers: {
@@ -361,7 +365,8 @@
                     }).then(r => {
                         console.log("FILES UPLOADED SUCCESSFULLY")
                         collection.files = ''
-                        this.getImages()
+                        collection.addedFiles = ''
+                        // this.getImages()
                     })
                 axios.post("/user-internal/" + this.userId + "/add-collection", this.collections, {
                     headers: {
