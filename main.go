@@ -14,6 +14,8 @@ import (
 	"strings"
 	"sync"
 
+	"go.mongodb.org/mongo-driver/mongo/options"
+
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -53,7 +55,7 @@ func main() {
 	router.HandleFunc("/user-internal/{userId}/get-collections/{collectionId}", getSharedCollectionContent).Methods("GET")
 	router.HandleFunc("/user-internal/collections/{collectionId}/images/{imageId}", getImages).Methods("GET")
 	router.HandleFunc("/user-internal/remove-collection-images/{collectionId}", removeImages).Methods("DELETE")
-	router.HandleFunc("/user-internal/remove-image/collections/{collectionID}/images/{imageID}", removeSpecificImages).Methods("DELETE")
+	router.HandleFunc("/user-internal/{userID}/remove-image/collections/{collectionID}/images/{imageID}", removeSpecificImages).Methods("DELETE")
 	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	router.PathPrefix("/node_modules/").Handler(http.StripPrefix("/node_modules/", http.FileServer(http.Dir("node_modules"))))
 	fmt.Println("**************STARTING THE SERVER**************")
@@ -100,12 +102,27 @@ func getSharedCollection(w http.ResponseWriter, r *http.Request) {
 
 func removeSpecificImages(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("here!")
-	// collectionID := (mux.Vars(r))["collecitonId"]
+	userID := (mux.Vars(r))["userID"]
+	collectionID := (mux.Vars(r))["collectionID"]
 	imageID := (mux.Vars(r))["imageID"]
+	fmt.Println(collectionID)
+	fmt.Println(imageID)
 	images := getCollection("images")
+	userData := getCollection("userData")
 	filter := bson.D{{"ImageID", imageID}}
 	_, err := images.DeleteOne(context.TODO(), filter)
 	if err != nil {
+		fmt.Println(err.Error())
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	filterUserData := bson.D{{"UserID", userID}}
+	// update := bson.D{{"$pull", bson.D{{"Collections.$[t].ImageIDs", bson.D{{"$in", imageID}}}}}}
+	update := bson.D{{"$pull", bson.M{"Collections.$[t].ImageIDs": imageID}}}
+	_, err = userData.UpdateOne(context.TODO(), filterUserData, update, options.Update().SetArrayFilters(options.ArrayFilters{Filters: []interface{}{bson.M{"t.CollectionID": collectionID}}}))
+	// userData.FindOne(context.TODO())
+	if err != nil {
+		fmt.Println(err.Error())
 		http.Error(w, err.Error(), 400)
 		return
 	}
