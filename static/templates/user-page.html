@@ -22,8 +22,8 @@
     <link rel="stylesheet" href="/node_modules/bootstrap-vue/dist/bootstrap-vue.css">
     </link>
     <script type="text/javascript" src="/node_modules/bootstrap-vue/dist/bootstrap-vue.min.js"></script>
+    <!-- <script type="text/javascript" src="/static/lib/require.js"></script> -->
     <link rel="stylesheet" href="/node_modules/@fortawesome/fontawesome-free/css/all.min.css">
-    <script type="text/javascript" src="/node_modules/lozad/dist/lozad.min.js"></script>
     <title>Image Collector</title>
 </head>
 
@@ -67,7 +67,8 @@
                             </div>
                         </div>
                         <button class="btn btn-outline-success" style="margin-top: 0.5em;"
-                            @click="saveCollection(collection,index)">Save Changes</button>
+                            v-bind:disabled="collection.savePressed" @click="saveCollection(collection,index)">Save
+                            Changes</button>
                         <button class="btn btn-outline-info" style="margin-top: 0.5em;"
                             @click="showTooltipForLink(index)" v-bind:id="'sharedBtn'+index">Share Collection</button>
                         <b-tooltip v-bind:target="'sharedBtn'+index" placement="right" triggers="manual">
@@ -382,22 +383,32 @@
                 return chunked_arr;
             },
             saveCollection: function (collection, index) {
-                let formData = new FormData()
-                let collectionTitle = "collection-title-" + index
-                collection.collectionName = document.getElementById(collectionTitle).innerText
-                if (collection.addedFiles.length > 0) {
-                    collection.addedFiles.forEach((file, index) => {
-                        let imageId = this.generateUniqueID()
-                        formData.append("file-" + index, file)
-                        formData.append("file-" + index + '-id', imageId)
-                        if (collection.closeIcons) {
-                            collection.closeIcons[index].setAttribute('id', imageId)
-                        }
-                        collection.imageIDs.push(imageId)
-                    });
+                if(!collection.saveCollectionCtr){
+                    collection.saveCollectionCtr = 0;
                 }
-                formData.append("collectionID", collection.collectionID)
-                formData.append("fileCount", collection.addedFiles.length)
+                console.log('saveCollectionCtr: ', collection.saveCollectionCtr)
+                if(collection.saveCollectionCtr > 0){
+                    return
+                }
+                let formData = new FormData();
+                let collectionTitle = "collection-title-" + index;
+                collection.collectionName = document.getElementById(collectionTitle).innerText;
+                if (collection.addedFiles) {
+                    if (collection.addedFiles.length > 0) {
+                        collection.addedFiles.forEach((file, index) => {
+                            let imageId = this.generateUniqueID();
+                            formData.append("file-" + index, file);
+                            formData.append("file-" + index + '-id', imageId);
+                            if (collection.closeIcons) {
+                                collection.closeIcons[index].setAttribute('id', imageId);
+                            }
+                            collection.imageIDs.push(imageId);
+                        });
+                    }
+                }
+                formData.append("collectionID", collection.collectionID);
+                formData.append("fileCount", collection.addedFiles.length);
+                collection.saveCollectionCtr++;//add before sending pictures
                 axios.post("/user-internal/" + this.userId + "/add-images", formData,
                     {
                         headers: {
@@ -405,31 +416,41 @@
                         }
                     }).then(r => {
                         console.log("FILES UPLOADED SUCCESSFULLY")
-                        collection.files = []
-                        collection.addedFiles = []
-                        collection.closeIcons = []
-                        // this.getImages()
+                        collection.saveCollectionCtr--;
+                        collection.files = [];
+                        collection.addedFiles = [];
+                        collection.closeIcons = [];
+                    }).catch(e => {
+                        collection.saveCollectionCtr--;
+                        console.log("failed with : ", e);
                     })
+                collection.saveCollectionCtr++;//add before update collection meta data
                 axios.post("/user-internal/" + this.userId + "/add-collection", this.collections, {
                     headers: {
                         'Content-Type': 'application/json'
                     }
-                }).then(r => {
-                    console.log("SUCCESSFULLY ADDED COLLECTION")
-                })
+                    }).then(r => {
+                    console.log("SUCCESSFULLY ADDED COLLECTION");
+                        collection.saveCollectionCtr--;
+                    }).catch(e=>{
+                        collection.saveCollectionCtr--;
+                        console.log('failed: ',e);
+                    })
                 console.log('collection.deletedImages, :', collection.deletedImages)
                 if (collection.deletedImages) {
                     collection.deletedImages.forEach(imageID => {
-                        console.log('collection.deletedImages: ,', collection.deletedImages)
+                        collection.saveCollectionCtr++;
+                        console.log('collection.deletedImages: ,', collection.deletedImages);
                         axios.delete("/user-internal/" + this.userId + "/remove-image/collections/" + collection.collectionID + "/images/" + imageID)
                             .then(r => {
-                                collection.deletedImages = []
-                                console.log('deleted images successfully!')
+                                collection.deletedImages = [];
+                                collection.saveCollectionCtr--;
+                                console.log('deleted images successfully!');
                             }).catch(e => {
-                                console.log("FAILED!: ", e)
+                                collection.saveCollectionCtr--;
+                                console.log("FAILED!: ", e);
                             })
                     })
-
                 }
             },
             generateUniqueID: function () {
