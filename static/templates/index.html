@@ -1,22 +1,112 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <link rel="stylesheet" href="/static/stylesheets/index.css">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+
     <title>Welcome to the Image Collector</title>
 </head>
+
 <body>
-    <nav class="navbar navbar-expand-sm">
-        <form action ="/login">
-            <button name="login">Login</button>
-        </form>
-        <form action ="/register">
-            <button name="register">Register</button>
-        </form>
-    </nav>
-    <h1>Introduction Page</h1>
+    <div id="index">
+        <div class="container">
+            <div id="login" class="row" v-if="isSignIn">
+                <!-- <div id="login" class="input-group mb-3"> -->
+                    <h3 id="heading">ACCOUNT LOGIN</h3>
+                    <div class="input-group mb-3">
+                        <input type="text" class="form-control" placeholder="Username" aria-label="Username"
+                            aria-describedby="basic-addon1">
+                    </div>
+                    <div class="input-group mb-3" style="margin-bottom:  0;">
+                        <input type="password" class="form-control" placeholder="Password" aria-label="password"
+                            aria-describedby="basic-addon1">
+                    </div>
+                    <button class="btn btn-primary btn-lg signin" style=" margin-top:0;width: 100%;">
+                        SIGN IN
+                    </button>
+                    <p id="createNewAccount" @click="isSignIn = false">
+                        Create new account →
+                    </p>
+                <!-- </div> -->
+            </div>
+            <div id="login" class="row" v-if="!isSignIn">
+                    <!-- <div id="login" class="input-group mb-3"> -->
+                        <h3 id="heading">ACCOUNT SIGN UP</h3>
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control" placeholder="Username" aria-label="Username"
+                                aria-describedby="basic-addon1">
+                        </div>
+                        <div class="input-group mb-3" style="margin-bottom:  0;">
+                            <input type="password" class="form-control" placeholder="Password" aria-label="password"
+                                aria-describedby="basic-addon1">
+                        </div>
+                        <button class="btn btn-primary btn-lg signin" style=" margin-top:0;width: 100%;">
+                            SIGN UP
+                        </button>
+                        <p id="createNewAccount" @click="isSignIn = true">
+                            Already have an account? →
+                        </p>
+                    <!-- </div> -->
+                </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+    integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+    crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+    integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+    crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+    integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+    crossorigin="anonymous"></script>
+<script type="text/javascript" src="/node_modules/vue/dist/vue.min.js"></script>
 </body>
+<script type="module">
+    var vm = new Vue({
+        el: '#index',
+        data: {
+            isSignIn:true
+
+        },
+        methods: {
+
+        }
+    })
+    export default { vm }
+</script>
+<style>
+    body{
+        background-image: url("static/assets/background.jpg");
+        filter: grayscale(20%)
+    }
+    .signin{
+        background-color: black;
+        border-radius: 10px;
+    }
+    #createNewAccount{
+        margin: 2vh auto;
+        font-size: 1.25rem;
+        cursor: pointer;
+    }
+    #heading{
+        margin: 1em auto;
+        opacity: 1;
+    }
+#login{
+    margin: 30vh auto;
+    padding: 1em;
+    width:50%;
+    background-color: rgba(255,230,230,0.4);
+    border-radius: 25px;
+    border-style: double;
+    border-width: 0.05em;
+    filter: sepia(10%);
+    }
+</style>
+
 </html>
