@@ -40,10 +40,8 @@ func init() {
 func main() {
 	//PUBLIC
 	router.HandleFunc("/", index).Methods("GET")
-	router.HandleFunc("/login", login).Methods("GET")
-	router.HandleFunc("/register", register).Methods("GET")
 	router.HandleFunc("/register", signUp).Methods("POST")
-	router.HandleFunc("/checkLogin", checkLogin).Methods("POST")
+	router.HandleFunc("/login", checkLogin).Methods("POST")
 	router.HandleFunc("/user/{userId}", getUser).Methods("GET")
 	router.HandleFunc("/shared/{userId}/{collectionID}", getSharedCollection).Methods("GET")
 	//INTERNAL

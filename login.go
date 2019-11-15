@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -27,22 +28,33 @@ func signUp(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to register user", 400)
 		return
 	}
-	http.Error(w, "Success", 200)
+	returnData := make(map[string]string)
+	returnData["userID"] = userDataID
+	v, err := json.Marshal(returnData)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	w.Header().Add("Content-type", "application/json")
+	w.Write(v)
 }
 
 func checkLogin(w http.ResponseWriter, r *http.Request) {
-	// var user User
-	// collectionUsers := getCollection("users")
-	// collectionUsers.FindOne(context.TODO(), bson.D{{"email", r.FormValue("email")}}).Decode(&user)
-	// if user.Password == r.FormValue("password") {
-	// 	//Send get request for user data based on id
-	// 	idStr := user.userID.String()
-	// 	fmt.Println(user)
-	// 	_, err := http.Get("/user/" + idStr)
-	// 	if err != nil {
-	// 		//handle error
-	// 	}
-	// } else {
-	// 	http.Error(w, "incorrect password", 400)
-	// }
+	var user User
+	var sentUser User
+	collectionUsers := getCollection("users")
+	returnData := make(map[string]string)
+	json.NewDecoder(r.Body).Decode(&sentUser)
+	fmt.Println(sentUser)
+	collectionUsers.FindOne(context.TODO(), bson.D{{"Email", sentUser.Email}}).Decode(&user)
+	fmt.Println(user)
+	if user.Password == sentUser.Password {
+		fmt.Println("here!")
+		w.Header().Add("Content-type", "application/json")
+		returnData["userID"] = user.UserID.Hex()
+		v, _ := json.Marshal(returnData)
+		w.Write(v)
+	} else {
+		http.Error(w, "incorrect password", 400)
+	}
 }

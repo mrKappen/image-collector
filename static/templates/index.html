@@ -19,14 +19,14 @@
                 <!-- <div id="login" class="input-group mb-3"> -->
                     <h3 id="heading">ACCOUNT LOGIN</h3>
                     <div class="input-group mb-3">
-                        <input type="text" class="form-control" placeholder="Username" aria-label="Username"
-                            aria-describedby="basic-addon1">
+                        <input type="text" class="form-control" placeholder="email" aria-label="Username"
+                            aria-describedby="basic-addon1" v-model="email">
                     </div>
                     <div class="input-group mb-3" style="margin-bottom:  0;">
                         <input type="password" class="form-control" placeholder="Password" aria-label="password"
-                            aria-describedby="basic-addon1">
+                            aria-describedby="basic-addon1" v-model="password">
                     </div>
-                    <button class="btn btn-primary btn-lg signin" style=" margin-top:0;width: 100%;">
+                    <button class="btn btn-primary btn-lg signin" style=" margin-top:0;width: 100%;" @click="signIn">
                         SIGN IN
                     </button>
                     <p id="createNewAccount" @click="isSignIn = false">
@@ -38,14 +38,14 @@
                     <!-- <div id="login" class="input-group mb-3"> -->
                         <h3 id="heading">ACCOUNT SIGN UP</h3>
                         <div class="input-group mb-3">
-                            <input type="text" class="form-control" placeholder="Username" aria-label="Username"
-                                aria-describedby="basic-addon1">
+                            <input type="text" class="form-control" placeholder="email" aria-label="Username"
+                                aria-describedby="basic-addon1" v-model="email">
                         </div>
                         <div class="input-group mb-3" style="margin-bottom:  0;">
                             <input type="password" class="form-control" placeholder="Password" aria-label="password"
-                                aria-describedby="basic-addon1">
+                                aria-describedby="basic-addon1" v-model="password">
                         </div>
-                        <button class="btn btn-primary btn-lg signin" style=" margin-top:0;width: 100%;">
+                        <button class="btn btn-primary btn-lg signin" style=" margin-top:0;width: 100%;" @click="signUp">
                             SIGN UP
                         </button>
                         <p id="createNewAccount" @click="isSignIn = true">
@@ -65,25 +65,44 @@
     integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
     crossorigin="anonymous"></script>
 <script type="text/javascript" src="/node_modules/vue/dist/vue.min.js"></script>
+<script type="text/javascript" src="/node_modules/axios/dist/axios.min.js"></script>
 </body>
 <script type="module">
     var vm = new Vue({
         el: '#index',
         data: {
-            isSignIn:true
+            isSignIn:true,
+            email:'',
+            password:''
 
         },
         methods: {
+            signUp:function(){
+                if(this.email && this.password){
+                    axios.post("/register",{email:this.email,password:this.password})
+                    .then(r=>{
+                        window.location = "/user/"+r.data.userID
+                    })
+                }
+            },
+            signIn:function(){
+                axios.post("/login",{email:this.email,password:this.password})
+                    .then(r=>{
+                        console.log(r)
+                        window.location = "/user/"+r.data.userID
+                    }).catch(e=>{
 
+                    })
+            }
         }
     })
     export default { vm }
 </script>
 <style>
-    body{
+    /* body{
         background-image: url("static/assets/background.jpg");
         filter: grayscale(20%)
-    }
+    } */
     .signin{
         background-color: black;
         border-radius: 10px;
