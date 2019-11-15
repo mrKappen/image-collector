@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0,shrink-to-fit=no">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+        integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+        integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+        crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+        crossorigin="anonymous"></script>
+
+    <script type="text/javascript" src="/node_modules/axios/dist/axios.min.js"></script>
+    <script type="text/javascript" src="/node_modules/vue/dist/vue.min.js"></script>
+    <link rel="stylesheet" href="/node_modules/bootstrap-vue/dist/bootstrap-vue.css">
+    </link>
+    <script type="text/javascript" src="/node_modules/bootstrap-vue/dist/bootstrap-vue.min.js"></script>
+    <!-- <script type="text/javascript" src="/static/lib/require.js"></script> -->
+    <link rel="stylesheet" href="/node_modules/@fortawesome/fontawesome-free/css/all.min.css">
+    <title>Image Collector</title>
+</head>
+
+<body>
+    <div id="userPage">
+        <div class="container" style="position: relative;">
+            <button class="btn btn-outline-primary" style="margin-left: 1em;margin-top: 1em;" @click="addCollection">Add
+                Collection</button>
+            <transition-group name="list">
+                <div v-for="(collection,index) in collections" style="margin: 1em;position: relative;"
+                    :key="collection.collectionID">
+                    <div>
+                        <div class="card" variant="light">
+                            <i class="fas fa-times deleteCollection"
+                                style="position: absolute; right: 0.25em;top:0.25em"
+                                @click="deleteCollection(collection,index)"></i>
+
+                            <div class="card-body">
+                                <h4 class="card-title" contenteditable v-bind:id="'collection-title-'+index">
+                                    {{collections[index].collectionName}}</h4>
+                                <b-form-file accept="image/*" multiple v-model="collection.files"
+                                    :file-name-formatter="formatNames" placeholder="Choose an image or drop it here"
+                                    @input="setUpPreview($event, collection,index)">
+                            </div>
+                            <div data-toggle="collapse" role="button" v-bind:data-target="'#collapse'+index"
+                                aria-expanded="false" v-bind:aria-controls="'collapse'+index">
+                                <b-row class="arrow justify-content-center"
+                                    v-bind:class="{clicked:collections[index].showImages}"
+                                    @click="setShowImages(collection,index)">
+                                    <i v-bind:class="{clicked:collections[index].showImages}" class="fas fa-angle-down"
+                                        style="font-size: 2em;"></i>
+                                </b-row>
+                            </div>
+                            <div class="collapse" v-bind:id="'collapse'+index">
+                                <div class="card card-body" style="margin: 1em;margin-top: 0em;">
+                                    <div class="container">
+                                        <div v-bind:id="'collectionImages'+index" class="grid">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-outline-success" style="margin-top: 0.5em;"
+                            v-bind:disabled="collection.savePressed" @click="saveCollection(collection,index)">Save
+                            Changes</button>
+                        <button class="btn btn-outline-info" style="margin-top: 0.5em;"
+                            @click="showTooltipForLink(index)" v-bind:id="'sharedBtn'+index">Share Collection</button>
+                        <b-tooltip v-bind:target="'sharedBtn'+index" placement="right" triggers="manual">
+                            A shareable link has been copied to your clickboard!
+                        </b-tooltip>
+                    </div>
+                </div>
+            </transition-group>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/vanilla-lazyload@12.3.0/dist/lazyload.min.js"></script>
+</body>
+<script type="module">
+    var vm = new Vue({
+        el: '#userPage',
+        data: {
+            userId: '',
+            collections: '',
+        },
+        created: function () {
+            let url = window.location.toString().split('/')
+            let urlArray = Array.from(url)
+            this.userId = urlArray[urlArray.indexOf('user') + 1]
+            this.getCollections()
+        },
+        computed: {
+        },
+        methods: {
+            isDirty: function (collection) {
+                console.log('IN IS DIRTY')
+                console.log(collection.addedFiles)
+                console.log(collection.deletedImages)
+                if (collection.addedFiles) {
+                    if (collection.addedFiles.length > 0) {
+                        return false;
+                    }
+                }
+                if (collection.deletedImages) {
+                    if (collection.deletedImages.length > 0) {
+                        return false;
+                    }
+                }
+                return true;
+            },
+            showTooltipForLink: function (index) {
+                let target = 'sharedBtn' + index
+                this.$root.$emit('bv::show::tooltip', target)
+                let vm = this;
+                setTimeout(function () {
+                    vm.$root.$emit('bv::hide::tooltip', target)
+                }, 800)
+                let link = window.location.origin + "/shared/" + this.userId + "/" + this.collections[index].collectionID;
+                let textArea = document.createElement('input');
+                document.body.appendChild(textArea)
+                textArea.setAttribute('value', link)
+                textArea.setAttribute('type', 'text')
+                textArea.select();
+                textArea.setSelectionRange(0, 99999);
+                console.log(textArea)
+                console.log(link)
+                document.execCommand("copy");
+                textArea.parentNode.removeChild(textArea)
+            },
+            setUpPreview: function (event, collection, index) {
+                console.log('in preview!')
+                let parent = document.querySelector("#collectionImages" + index);
+                let vm = this;
+                if (collection.addedFiles === undefined) {
+                    collection.addedFiles = []
+                }
+                if (collection.closeIcons === undefined) {
+                    collection.closeIcons = []
+                }
+                if (event.length > 0) {
+                    event.forEach((file, fileIndex) => {
+                        let closeIcon = document.createElement('i');
+                        collection.addedFiles.push(file);
+                        collection.closeIcons.push(closeIcon);
+                        let reader = new window.FileReader();
+                        reader.readAsDataURL(file);
+                        reader.onload = function () {
+                            console.log('in call back!', file)
+                            let image = document.createElement('img');
+                            closeIcon.setAttribute('class', 'fas fa-times deleteCollection deleteImageButton');
+                            let parentCell = document.createElement('div');
+                            parentCell.classList.add("cell")
+                            image.setAttribute('data-src', reader.result);
+                            image.classList.add('lazy');
+                            image.classList.add('displayImages');
+                            closeIcon.classList.add('displayImages')
+                            image.classList.add('responsive-image')
+                            parentCell.appendChild(closeIcon)
+                            parentCell.appendChild(image)
+                            parent.appendChild(parentCell);
+                            closeIcon.addEventListener("click", event => {
+                                console.log("CLICKED an ADDED ITEM", event)
+                                console.log('id', closeIcon.getAttribute('id'));
+                                if (closeIcon.getAttribute('id')) {
+                                    let deletedImageId = closeIcon.getAttribute('id')
+                                    if (!collection.deletedImages) {
+                                        collection.deletedImages = [];
+                                    }
+                                    collection.deletedImages.push(deletedImageId)
+                                }
+                                let removedIndex = collection.addedFiles.indexOf(file)
+                                collection.addedFiles.splice(removedIndex, 1);
+                                collection.closeIcons.splice(removedIndex, 1);
+                                image.classList.add("imageDeleted");
+                                closeIcon.classList.add("imageDeleted");
+                                setTimeout(function () {
+                                    parentCell.parentNode.removeChild(parentCell);
+                                }, 400)
+                            })
+                            // vm.$set(vm.collections[collectionIndex], "imageUrls", collection.imageUrls)
+                            // vm.$set(vm.collections[collectionIndex], "displayImages", vm.getDeepCopyImageDisplay(vm.collections[collectionIndex]))
+                            let lazyloadInstance = new LazyLoad({
+                                elements_selector: ".lazy"
+                            })
+                            image.onload = function () {
+                                console.log('in on load call back', image.complete);
+                                image.classList.add('imageLoaded');
+                                closeIcon.classList.add('imageLoaded')
+                            }
+                        }
+                    })
+                }
+            },
+            formatNames(files) {
+                if (files.length === 1) {
+                    return files[0].name
+                } else {
+                    return `${files.length} files selected`
+                }
+            },
+            deleteImage: function (collection, index) {
+                console.log('inside delete image')
+                console.log('deleted index: ', index)
+                if (collection.deletedImages == undefined) {
+                    collection.deletedImages = []
+                }
+                collection.deletedImages.push(collection.imageIDs[index])
+                collection.imageIDs.splice(index, 1);
+                collection.imageUrls.splice(index, 1);
+                collection.displayImages = this.getDeepCopyImageDisplay(collection)
+            },
+            getDeepCopyImageDisplay: function (collection) {
+                let copiedArray = []
+                if (collection.imageIDs.length > 0) {
+                    collection.imageIDs.forEach((imageID, index) => {
+                        copiedArray.push({ imageID: imageID, dataUrl: collection.imageUrls[index] })
+                    })
+                }
+                return copiedArray;
+            },
+            getImageChunk: function (collection) {
+                console.log('INSIDE get Image Chunk')
+                const chunked_arr = [];
+                const size = 3;
+                let copied = this.getDeepCopyImageDisplay(collection)
+                const numOfChild = Math.ceil(copied.length / size); // Round up to the nearest integer
+                for (let i = 0; i < numOfChild; i++) {
+                    chunked_arr.push(copied.splice(0, size));
+                }
+                return chunked_arr;
+            },
+            setCollectionTitle: function (event, collection) {
+                collection.collectionName = event.target.innerText
+            },
+            deleteCollection: function (collection, index) {
+                this.$set(this.collections[index], "isDeleted", true)
+                this.collections.splice(index, 1)
+                axios.post("/user-internal/" + this.userId + "/add-collection", this.collections, {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }).then(r => {
+                    console.log("SUCCESSFULLY DELETED COLLECTION")
+                })
+                axios.delete("/user-internal/remove-collection-images/" + collection.collectionID)
+                    .then(r => {
+                        console.log("successfully removed images")
+                    })
+            },
+            getImages: function (collection, collectionIndex) {
+                console.log('inside get images')
+                if (collection.gotImages) {
+                    return;
+                }
+                collection.gotImages = true
+                let parent = document.querySelector("#collectionImages" + collectionIndex);
+                let previewedImages = parent.querySelectorAll('i');
+                let savedImages = Array.from(previewedImages).map(image => image.getAttribute('id'));
+                console.log(savedImages)
+                if (collection.imageIDs.length > 0) {
+                    collection.imageIDs.forEach((imageID, index) => {
+                        if (savedImages.indexOf(imageID) == -1) {
+                            axios.get("/user-internal/collections/" + collection.collectionID + "/images/" + imageID,
+                                {
+                                    responseType: 'blob'
+                                })
+                                .then(response => {
+                                    let reader = new window.FileReader();
+                                    reader.readAsDataURL(response.data);
+                                    reader.onload = function () {
+                                        console.log('in Reader')
+                                        if (reader.result !== 'data:') {//an error occurred
+                                            let image = document.createElement('img');
+                                            let closeIcon = document.createElement('i');
+                                            closeIcon.setAttribute('class', 'fas fa-times deleteCollection deleteImageButton');
+                                            closeIcon.setAttribute('id', imageID)
+                                            let parentCell = document.createElement('div');
+                                            parentCell.classList.add("cell");
+                                            parentCell.classList.add("displayImages");
+
+                                            image.setAttribute('data-src', reader.result);
+                                            image.classList.add('lazy');
+                                            image.classList.add('displayImages');
+                                            closeIcon.classList.add('displayImages')
+                                            image.classList.add('responsive-image')
+                                            parentCell.appendChild(closeIcon)
+                                            parentCell.appendChild(image)
+                                            parent.appendChild(parentCell);
+                                            closeIcon.addEventListener("click", event => {
+                                                console.log("CLICKED an ADDED ITEM", event)
+                                                console.log('id', closeIcon.getAttribute('id'));
+                                                if (closeIcon.getAttribute('id')) {
+                                                    let deletedImageId = closeIcon.getAttribute('id')
+                                                    if (!collection.deletedImages) {
+                                                        collection.deletedImages = [];
+                                                    }
+                                                    collection.deletedImages.push(deletedImageId)
+                                                }
+                                                image.classList.add("imageDeleted");
+                                                closeIcon.classList.add("imageDeleted");
+                                                setTimeout(function () {
+                                                    parentCell.parentNode.removeChild(parentCell);
+                                                }, 400)
+                                            })
+                                            let lazyloadInstance = new LazyLoad({
+                                                elements_selector: ".lazy"
+                                            })
+                                            image.onload = function () {
+                                                console.log('in on load call back', image.complete);
+                                                image.classList.add('imageLoaded');
+                                                closeIcon.classList.add('imageLoaded');
+                                                parentCell.classList.add('imageLoaded');
+                                            }
+                                        }
+                                    }
+                                })
+                        }
+                    })
+                }
+            },
+            getReaderData: function (fn) {
+                let dataUrl = reader.result
+            },
+            setShowImages: function (collection, index) {
+                this.$set(collection, "showImages", !collection.showImages)
+                this.getImages(collection, index)
+            },
+            getCollections: function () {
+                console.log("inside get collections")
+                axios.get("/user-internal/" + this.userId + "/get-collections")
+                    .then(r => {
+                        if (r.data.collections) {
+                            this.collections = r.data.collections
+                            console.log(this.collections)
+                        } else {
+                            this.collections = []
+                        }
+                        if (this.collections.length > 0) {
+                            this.collections.forEach(collection => {
+                                collection.gotImages = false;
+                                collection.imageUrls = [];
+                                collection.files = [];
+                                collection.addedFiles = [];
+                                collection.deletedImages = [];
+                            })
+                        }
+                        // this.getImages()
+                    })
+            },
+            addCollection: function () {
+                "inside addCollection"
+                this.collections.push({
+                    userId: this.userId,
+                    collectionID: this.generateUniqueID(),
+                    collectionName: 'My Pictures',
+                    imageIDs: [],
+                    imageUrls: [],
+                    showImages: false,
+                    displayImages: [],
+                    files: []
+                })
+                console.log(this.collections)
+                axios.post("/user-internal/" + this.userId + "/add-collection", this.collections, {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }).then(r => {
+                    console.log("SUCCESSFULLY ADDED COLLECTION")
+                })
+            },
+            chunkArray: function (array, size) {
+                const chunked_arr = [];
+                let copied = JSON.parse(JSON.stringify(array));
+                const numOfChild = Math.ceil(copied.length / size); // Round up to the nearest integer
+                for (let i = 0; i < numOfChild; i++) {
+                    chunked_arr.push(copied.splice(0, size));
+                }
+                return chunked_arr;
+            },
+            saveCollection: function (collection, index) {
+                if(!collection.saveCollectionCtr){
+                    collection.saveCollectionCtr = 0;
+                }
+                console.log('saveCollectionCtr: ', collection.saveCollectionCtr)
+                if(collection.saveCollectionCtr > 0){
+                    return
+                }
+                let formData = new FormData();
+                let collectionTitle = "collection-title-" + index;
+                collection.collectionName = document.getElementById(collectionTitle).innerText;
+                if (collection.addedFiles) {
+                    if (collection.addedFiles.length > 0) {
+                        collection.addedFiles.forEach((file, index) => {
+                            let imageId = this.generateUniqueID();
+                            formData.append("file-" + index, file);
+                            formData.append("file-" + index + '-id', imageId);
+                            if (collection.closeIcons) {
+                                collection.closeIcons[index].setAttribute('id', imageId);
+                            }
+                            collection.imageIDs.push(imageId);
+                        });
+                    }
+                }
+                formData.append("collectionID", collection.collectionID);
+                formData.append("fileCount", collection.addedFiles.length);
+                collection.saveCollectionCtr++;//add before sending pictures
+                axios.post("/user-internal/" + this.userId + "/add-images", formData,
+                    {
+                        headers: {
+                            'Content-Type': 'multipart/form-data'
+                        }
+                    }).then(r => {
+                        console.log("FILES UPLOADED SUCCESSFULLY")
+                        collection.saveCollectionCtr--;
+                        collection.files = [];
+                        collection.addedFiles = [];
+                        collection.closeIcons = [];
+                    }).catch(e => {
+                        collection.saveCollectionCtr--;
+                        console.log("failed with : ", e);
+                    })
+                collection.saveCollectionCtr++;//add before update collection meta data
+                axios.post("/user-internal/" + this.userId + "/add-collection", this.collections, {
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                    }).then(r => {
+                    console.log("SUCCESSFULLY ADDED COLLECTION");
+                        collection.saveCollectionCtr--;
+                    }).catch(e=>{
+                        collection.saveCollectionCtr--;
+                        console.log('failed: ',e);
+                    })
+                console.log('collection.deletedImages, :', collection.deletedImages)
+                if (collection.deletedImages) {
+                    collection.deletedImages.forEach(imageID => {
+                        collection.saveCollectionCtr++;
+                        console.log('collection.deletedImages: ,', collection.deletedImages);
+                        axios.delete("/user-internal/" + this.userId + "/remove-image/collections/" + collection.collectionID + "/images/" + imageID)
+                            .then(r => {
+                                collection.deletedImages = [];
+                                collection.saveCollectionCtr--;
+                                console.log('deleted images successfully!');
+                            }).catch(e => {
+                                collection.saveCollectionCtr--;
+                                console.log("FAILED!: ", e);
+                            })
+                    })
+                }
+            },
+            generateUniqueID: function () {
+                return (Math.random(10).toString(16).substring(2) + Math.random(10).toString(16).substring(2));
+            }
+        }
+    })
+    export default { vm }
+</script>
+<style>
+    .btn:focus {
+        outline: none !important;
+    }
+
+    .arrow i {
+        transition: all 0.4s ease;
+    }
+
+    .arrow i.clicked {
+        transform: rotateZ(-180deg);
+    }
+
+    .deleteCollection {
+        font-size: 1.5em;
+    }
+
+    .deleteCollection:hover {
+        color: red;
+    }
+
+    .list-enter-active,
+    .list-leave-active {
+        transition: all 0.4s ease;
+    }
+
+    .list-enter,
+    .list-leave-to {
+        opacity: 0;
+    }
+
+    .image-enter-active,
+    .image-leave-active {
+        transition: all 0.4s ease;
+    }
+
+    .image-enter,
+    .image-leave-to {
+        opacity: 0;
+    }
+
+    .card-title:focus {
+        outline: none;
+    }
+
+    .imageCol {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        position: relative
+    }
+
+    i.deleteCollection.deleteImageButton {
+        font-size: 1.25em;
+        position: absolute;
+        float: center;
+        right: 0em;
+        top: -1em;
+    }
+
+    .container {
+        margin: 0 auto;
+        max-width: 1200px;
+        padding: 0 1rem;
+    }
+
+    .responsive-image {
+        max-width: 100%;
+    }
+
+    .cell {
+        position: relative;
+        display: block;
+        margin: 1rem
+    }
+
+    @media screen and (min-width: 600px) {
+        .grid {
+            display: flex;
+            flex-wrap: wrap;
+            flex-direction: row;
+            align-items: center;
+        }
+
+        .cell {
+            width: calc(50%-2rem)
+        }
+    }
+
+    .displayImages {
+        opacity: 0;
+        transition: all 0.3s ease;
+    }
+
+    .displayImages.imageLoaded {
+        opacity: 1;
+        transition: all 0.3s ease;
+    }
+
+    .displayImages.imageLoaded.imageDeleted {
+        opacity: 0;
+    }
+
+    @media screen and (min-width: 1000px) {
+        .cell {
+            width: calc(100%/3 - 2rem);
+        }
+    }
+</style>
+
+</html>

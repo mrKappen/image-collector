@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <title>Register Page</title>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <div id = "register">
+            <h1>Register Page</h1>
+            <div>
+                <input type="text" placeholder="first name" v-model="firstName">
+                <input type="text" placeholder="last name" v-model="lastName">
+                <input type="email" placeholder="joe@gmail.com" v-model="email">
+                <input type="password" name="password" v-model="password">
+                <button @click="registerUser">Register!</button>
+            </div>
+    </div>
+</body>
+<script type ="module">
+  import Vue from 'https://cdn.jsdelivr.net/npm/vue@2.6.10/dist/vue.esm.browser.js'
+  var vm = new Vue({
+    el:'#register',
+    data:{
+        firstName: '',
+        lastName:'',
+        email:'',
+        password:'',
+        userId: '',
+    },
+    methods:{
+        registerUser:function(){
+            //TODO: check if new user
+            axios.post("/register",{
+                firstName: this.firstName,
+                lastName:this.lastName,
+                email:this.email,
+                password:this.password
+            }).then(r=>{
+                console.log("Success")
+                this.getUserByEmail(this.email)
+            })
+        },
+        getUserByEmail:function(email){
+            //TODO:add some auth
+            axios.put("/user-internal/"+this.email).
+            then(r=>{
+                console.log(r)
+                this.userId = r.data._id
+                window.location = "/user/"+this.userId
+            })
+        }
+    }
+  })
+  export default {vm}
+</script>
+</html>
