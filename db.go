@@ -5,18 +5,18 @@ import (
 	"errors"
 	"log"
 	"os"
+
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 const database string = "imageCollector"
 
-// const URI string = "mongodb+srv://tkappen:Jesus999*@cluster0-jcnwn.mongodb.net/test"
-
 func setUpDb() (*mongo.Client, error) {
 	// Set client options
-	DB_URI, ok := os.LookupEnv("DB_STRING")
-	if !ok {
+	DB_URI := os.Getenv("DB_STRING")
+	log.Println(DB_URI)
+	if DB_URI == "" {
 		log.Println("Connection string not found!")
 		return nil, errors.New("connection string not found")
 	}
