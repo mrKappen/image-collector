@@ -57,7 +57,8 @@ func main() {
 	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	router.PathPrefix("/node_modules/").Handler(http.StripPrefix("/node_modules/", http.FileServer(http.Dir("node_modules"))))
 	fmt.Println("**************STARTING THE SERVER**************")
-	err := http.ListenAndServe(":80", router)
+	// err := http.ListenAndServe(":80", router)
+	err := http.ListenAndServeTLS(":443", "cert.pem", "key.pem", router)
 	fmt.Println(err)
 }
 func getSharedCollectionContent(w http.ResponseWriter, r *http.Request) {
