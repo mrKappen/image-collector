@@ -16,10 +16,8 @@ import (
 	"sync"
 
 	"go.mongodb.org/mongo-driver/mongo/options"
-
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-
+	"github.com/gorilla/handlers"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
