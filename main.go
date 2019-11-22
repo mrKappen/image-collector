@@ -57,9 +57,18 @@ func main() {
 	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	router.PathPrefix("/node_modules/").Handler(http.StripPrefix("/node_modules/", http.FileServer(http.Dir("node_modules"))))
 	fmt.Println("**************STARTING THE SERVER**************")
-	err := http.ListenAndServe(":8080", router)
+	err := http.ListenAndServe(GetPort(), router)
 	// err := http.ListenAndServeTLS(":443", "cert.pem", "key.pem", router)
 	fmt.Println(err)
+}
+func GetPort() string {
+	var port = os.Getenv("PORT")
+	// Set a default port if there is nothing in the environment
+	if port == "" {
+		port = "4747"
+		fmt.Println("INFO: No PORT environment variable detected, defaulting to " + port)
+	}
+	return ":" + port
 }
 func getSharedCollectionContent(w http.ResponseWriter, r *http.Request) {
 	userId := (mux.Vars(r))["userId"]
