@@ -15,11 +15,11 @@ import (
 	"strings"
 	"sync"
 
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"github.com/gorilla/mux"
 	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 var db *mongo.Client
@@ -34,6 +34,10 @@ func init() {
 	db, dbError = setUpDb()
 	if dbError != nil {
 		fmt.Printf(dbError.Error())
+	}
+	err := os.Mkdir("static/temp", 0755)
+	if err != nil {
+		log.Println("failed to make temp folder: ", err.Error())
 	}
 	router = mux.NewRouter()
 }
@@ -69,6 +73,7 @@ func getPort() string {
 		port = "4747"
 		fmt.Println("INFO: No PORT environment variable detected, defaulting to " + port)
 	}
+	log.Println(port)
 	return ":" + port
 }
 func getSharedCollectionContent(w http.ResponseWriter, r *http.Request) {
