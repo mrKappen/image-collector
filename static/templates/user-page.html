@@ -24,11 +24,14 @@
     <script type="text/javascript" src="/node_modules/bootstrap-vue/dist/bootstrap-vue.min.js"></script>
     <!-- <script type="text/javascript" src="/static/lib/require.js"></script> -->
     <link rel="stylesheet" href="/node_modules/@fortawesome/fontawesome-free/css/all.min.css">
-    <title>Image Collector</title>
+    <title>Share your albums</title>
 </head>
-
 <body>
     <div id="userPage">
+        <nav class="navbar navbar-dark bg-dark">
+            <i class="fas fa-boxes" style="color: white;font-size: 2em;"></i>
+            <button class="btn btn-danger my-2 my-sm-0" @click="signOut">Sign Out</button>
+        </nav>
         <div class="container" style="position: relative;">
             <button class="btn btn-outline-primary" style="margin-left: 1em;margin-top: 1em;" @click="addCollection">Add
                 Collection</button>
@@ -97,6 +100,11 @@
         computed: {
         },
         methods: {
+            signOut: function () {
+                console.log("logging out")
+                axios.post("/logout")
+                window.location = "/"
+            },
             isDirty: function (collection) {
                 console.log('IN IS DIRTY')
                 console.log(collection.addedFiles)
@@ -383,11 +391,11 @@
                 return chunked_arr;
             },
             saveCollection: function (collection, index) {
-                if(!collection.saveCollectionCtr){
+                if (!collection.saveCollectionCtr) {
                     collection.saveCollectionCtr = 0;
                 }
                 console.log('saveCollectionCtr: ', collection.saveCollectionCtr)
-                if(collection.saveCollectionCtr > 0){
+                if (collection.saveCollectionCtr > 0) {
                     return
                 }
                 let formData = new FormData();
@@ -429,13 +437,13 @@
                     headers: {
                         'Content-Type': 'application/json'
                     }
-                    }).then(r => {
+                }).then(r => {
                     console.log("SUCCESSFULLY ADDED COLLECTION");
-                        collection.saveCollectionCtr--;
-                    }).catch(e=>{
-                        collection.saveCollectionCtr--;
-                        console.log('failed: ',e);
-                    })
+                    collection.saveCollectionCtr--;
+                }).catch(e => {
+                    collection.saveCollectionCtr--;
+                    console.log('failed: ', e);
+                })
                 console.log('collection.deletedImages, :', collection.deletedImages)
                 if (collection.deletedImages) {
                     collection.deletedImages.forEach(imageID => {
