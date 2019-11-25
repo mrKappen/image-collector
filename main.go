@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -17,6 +18,8 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/securecookie"
+	sessions "github.com/gorilla/sessions"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -29,8 +32,22 @@ var mutexRetrieve = &sync.Mutex{}
 
 //router := mux.NewRouter()
 var router *mux.Router
+var store *sessions.CookieStore
 
 func init() {
+	authKeyOne := securecookie.GenerateRandomKey(64)
+	encryptionKeyOne := securecookie.GenerateRandomKey(32)
+
+	store = sessions.NewCookieStore(
+		authKeyOne,
+		encryptionKeyOne,
+	)
+
+	store.Options = &sessions.Options{
+		MaxAge:   60 * 15,
+		HttpOnly: false,
+	}
+	gob.Register(User{})
 	db, dbError = setUpDb()
 	if dbError != nil {
 		fmt.Printf(dbError.Error())
@@ -47,7 +64,8 @@ func main() {
 	router.HandleFunc("/", index).Methods("GET")
 	router.HandleFunc("/register", signUp).Methods("POST")
 	router.HandleFunc("/login", checkLogin).Methods("POST")
-	router.HandleFunc("/user/{userId}", getUser).Methods("GET")
+	router.HandleFunc("/logout", logout).Methods("POST")
+	router.HandleFunc("/user/{userId}", authCheck(getUser)).Methods("GET")
 	router.HandleFunc("/shared/{userId}/{collectionID}", getSharedCollection).Methods("GET")
 	//INTERNAL
 	router.HandleFunc("/user-internal/{email}", getUserByEmail).Methods("PUT")
@@ -75,6 +93,19 @@ func getPort() string {
 	}
 	log.Println(port)
 	return ":" + port
+}
+func authCheck(f func(w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		session, err := store.Get(r, "auth-cookie")
+		if err != nil {
+			log.Println("Failed to set auth cookie: " + err.Error())
+		}
+		if session.Values["authenticated"] == false || session.Values["authenticated"] == nil {
+			http.Redirect(w, r, "/", http.StatusFound)
+		} else {
+			f(w, r)
+		}
+	}
 }
 func getSharedCollectionContent(w http.ResponseWriter, r *http.Request) {
 	userId := (mux.Vars(r))["userId"]
@@ -207,8 +238,17 @@ func getImages(w http.ResponseWriter, r *http.Request) {
 // 	mutexRetrieve.Unlock()
 // }
 func index(w http.ResponseWriter, r *http.Request) {
-	t := template.Must(template.ParseFiles("static/templates/index.html"))
-	t.Execute(w, nil)
+	session, err := store.Get(r, "auth-cookie")
+	if err != nil {
+		log.Println("Failed to set auth cookie: " + err.Error())
+	}
+	if session.Values["authenticated"] == true {
+		userID := session.Values["userID"].(string)
+		http.Redirect(w, r, "/user/"+userID, http.StatusFound)
+	} else {
+		t := template.Must(template.ParseFiles("static/templates/index.html"))
+		t.Execute(w, nil)
+	}
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
@@ -220,6 +260,16 @@ func register(w http.ResponseWriter, r *http.Request) {
 	t.Execute(w, nil)
 }
 func getUser(w http.ResponseWriter, r *http.Request) {
+	userID := (mux.Vars(r))["userId"]
+	session, err := store.Get(r, "auth-cookie")
+	if err != nil {
+		log.Println("Failed to set auth cookie: " + err.Error())
+	}
+	userIDFromCookie := session.Values["userID"].(string)
+	if userID != userIDFromCookie {
+		logout(w, r)
+		return
+	}
 	userPage, _ := os.Open("static/templates/user-page.html")
 	fileSize, err := userPage.Stat()
 	userPageData := make([]byte, fileSize.Size())

@@ -7,19 +7,22 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
         integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+        <link rel="stylesheet" href="/node_modules/@fortawesome/fontawesome-free/css/all.min.css">
 
-
-    <title>Welcome to the Image Collector</title>
+    <title>Share your albums</title>
 </head>
 
 <body>
     <div id="index">
+            <nav class="navbar navbar-dark bg-dark">
+                    <i class="fas fa-boxes" style="color: white;font-size: 2em;"></i>
+                </nav>
         <div class="container">
             <div id="login" class="row" v-if="isSignIn">
                 <!-- <div id="login" class="input-group mb-3"> -->
                     <h3 id="heading">ACCOUNT LOGIN</h3>
                     <div class="input-group mb-3">
-                        <input type="text" class="form-control" placeholder="email" aria-label="Username"
+                        <input type="text" class="form-control" placeholder="Username" aria-label="Username"
                             aria-describedby="basic-addon1" v-model="email">
                     </div>
                     <div class="input-group mb-3" style="margin-bottom:  0;">
@@ -38,7 +41,7 @@
                     <!-- <div id="login" class="input-group mb-3"> -->
                         <h3 id="heading">ACCOUNT SIGN UP</h3>
                         <div class="input-group mb-3">
-                            <input type="text" class="form-control" placeholder="email" aria-label="Username"
+                            <input type="text" class="form-control" placeholder="Username" aria-label="Username"
                                 aria-describedby="basic-addon1" v-model="email">
                         </div>
                         <div class="input-group mb-3" style="margin-bottom:  0;">
