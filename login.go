@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -106,9 +105,7 @@ func checkLogin(w http.ResponseWriter, r *http.Request) {
 	collectionUsers := getCollection("users")
 	returnData := make(map[string]string)
 	json.NewDecoder(r.Body).Decode(&sentUser)
-	fmt.Println(sentUser)
 	collectionUsers.FindOne(context.TODO(), bson.D{{"Email", sentUser.Email}}).Decode(&user)
-	fmt.Println(user)
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(sentUser.Password)); err != nil {
 		// If the two passwords don't match, return a 401 status
 		w.WriteHeader(http.StatusUnauthorized)

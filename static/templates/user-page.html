@@ -26,6 +26,7 @@
     <link rel="stylesheet" href="/node_modules/@fortawesome/fontawesome-free/css/all.min.css">
     <title>Share your albums</title>
 </head>
+
 <body>
     <div id="userPage">
         <nav class="navbar navbar-dark bg-dark">
@@ -72,7 +73,7 @@
                         <button class="btn btn-outline-success" style="margin-top: 0.5em;"
                             v-bind:disabled="collection.savePressed" @click="saveCollection(collection,index)">Save
                             Changes</button>
-                            
+
                         <button class="btn btn-outline-info" style="margin-top: 0.5em;"
                             @click="showTooltipForLink(index)" v-bind:id="'sharedBtn'+index">Share Collection</button>
                         <b-tooltip v-bind:target="'sharedBtn'+index" placement="right" triggers="manual">
@@ -274,6 +275,19 @@
                 if (collection.imageIDs.length > 0) {
                     collection.imageIDs.forEach((imageID, index) => {
                         if (savedImages.indexOf(imageID) == -1) {
+                            let image = document.createElement('img');
+                            image.classList.add('responsive-image')
+                            image.setAttribute("src", "/static/assets/spinner.gif")
+                            image.setAttribute("style","margin-left:25%")
+                            let closeIcon = document.createElement('i');
+                            closeIcon.setAttribute('class', 'fas fa-times deleteCollection deleteImageButton');
+                            closeIcon.setAttribute('id', imageID)
+                            let parentCell = document.createElement('div');
+                            parentCell.classList.add("cell");
+
+                            // parentCell.classList.add("displayImages");
+                            parentCell.appendChild(image)
+                                            parent.appendChild(parentCell);
                             axios.get("/user-internal/collections/" + collection.collectionID + "/images/" + imageID,
                                 {
                                     responseType: 'blob'
@@ -284,22 +298,12 @@
                                     reader.onload = function () {
                                         console.log('in Reader')
                                         if (reader.result !== 'data:') {//an error occurred
-                                            let image = document.createElement('img');
-                                            let closeIcon = document.createElement('i');
-                                            closeIcon.setAttribute('class', 'fas fa-times deleteCollection deleteImageButton');
-                                            closeIcon.setAttribute('id', imageID)
-                                            let parentCell = document.createElement('div');
-                                            parentCell.classList.add("cell");
-                                            parentCell.classList.add("displayImages");
-
                                             image.setAttribute('data-src', reader.result);
                                             image.classList.add('lazy');
                                             image.classList.add('displayImages');
                                             closeIcon.classList.add('displayImages')
-                                            image.classList.add('responsive-image')
                                             parentCell.appendChild(closeIcon)
-                                            parentCell.appendChild(image)
-                                            parent.appendChild(parentCell);
+
                                             closeIcon.addEventListener("click", event => {
                                                 console.log("CLICKED an ADDED ITEM", event)
                                                 console.log('id', closeIcon.getAttribute('id'));
@@ -321,10 +325,13 @@
                                             })
                                             image.onload = function () {
                                                 console.log('in on load call back', image.complete);
+                                                image.removeAttribute("style")
                                                 image.classList.add('imageLoaded');
                                                 closeIcon.classList.add('imageLoaded');
                                                 parentCell.classList.add('imageLoaded');
                                             }
+                                        }else{
+                                            parent.removeChild(parentCell)
                                         }
                                     }
                                 })

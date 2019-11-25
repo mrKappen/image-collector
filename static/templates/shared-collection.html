@@ -87,6 +87,15 @@
                 console.log(parent)
                 if (collection.imageIDs.length > 0) {
                     collection.imageIDs.forEach((imageID, index) => {
+                        let image = document.createElement('img');
+                        image.classList.add('responsive-image')
+                        image.setAttribute("style","margin-left:25%")
+                        image.setAttribute("src", "/static/assets/spinner.gif")
+                        let parentCell = document.createElement('div');
+                        parentCell.classList.add("cell")
+                        image.setAttribute("id", 'image' + index)
+                        parentCell.appendChild(image)
+                        parent.appendChild(parentCell);
                         axios.get("/user-internal/collections/" + collection.collectionID + "/images/" + imageID,
                             {
                                 responseType: 'blob'
@@ -99,21 +108,21 @@
                                     if (collection.imageUrls === undefined) {
                                         collection.imageUrls = [];
                                     }
-                                    let image = document.createElement('img');
-                                    let parentCell = document.createElement('div');
-                                    parentCell.classList.add("cell")
-                                    image.setAttribute('data-src', reader.result);
+                                    if (reader.result === "data:") {
+                                        parent.removeChild(parentCell)
+                                        return
+                                    }
                                     image.classList.add('lazy');
                                     image.classList.add('displayImages');
-                                    image.classList.add('responsive-image')
-                                    image.setAttribute("id", 'image' + index)
-                                    parentCell.appendChild(image)
-                                    parent.appendChild(parentCell);
+
+                                    image.setAttribute('data-src', reader.result);
+
                                     let lazyloadInstance = new LazyLoad({
                                         elements_selector: "#image" + index
                                     })
                                     image.onload = function () {
                                         console.log('in on load call back', image.complete);
+                                        image.removeAttribute("style")
                                         image.classList.add('imageLoaded');
                                         ctr++;
                                     }
