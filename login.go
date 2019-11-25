@@ -13,6 +13,20 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+func isDuplicateUser(username string) bool {
+	users := getCollection("users")
+	filter := bson.D{{"Email", username}}
+	cur, err := users.Find(context.TODO(), filter)
+	var results []User
+	if err != nil {
+		log.Println("failed to check db for dupes: " + err.Error())
+	}
+	cur.All(context.TODO(), &results)
+	if len(results) > 0 {
+		return true
+	}
+	return false
+}
 func logout(w http.ResponseWriter, r *http.Request) {
 	log.Println("IN logout")
 	session, err := store.Get(r, "auth-cookie")
@@ -37,7 +51,16 @@ func signUp(w http.ResponseWriter, r *http.Request) {
 	//TODO: ensure created user is unique
 	var user User
 	var createdUser User
+	returnError := make(map[string]string)
 	_ = json.NewDecoder(r.Body).Decode(&user)
+	if isDuplicateUser(user.Email) {
+		returnError["error"] = "duplicate user"
+		va, _ := json.Marshal(returnError)
+		w.WriteHeader(http.StatusForbidden)
+		w.Header().Add("Content-type", "application/json")
+		w.Write(va)
+		return
+	}
 	uniqueEmail := user.Email
 	usersCollection := getCollection("users")
 	userDataCollection := getCollection("userData")

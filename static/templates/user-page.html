@@ -72,6 +72,7 @@
                         <button class="btn btn-outline-success" style="margin-top: 0.5em;"
                             v-bind:disabled="collection.savePressed" @click="saveCollection(collection,index)">Save
                             Changes</button>
+                            
                         <button class="btn btn-outline-info" style="margin-top: 0.5em;"
                             @click="showTooltipForLink(index)" v-bind:id="'sharedBtn'+index">Share Collection</button>
                         <b-tooltip v-bind:target="'sharedBtn'+index" placement="right" triggers="manual">

@@ -260,6 +260,16 @@ func register(w http.ResponseWriter, r *http.Request) {
 	t.Execute(w, nil)
 }
 func getUser(w http.ResponseWriter, r *http.Request) {
+	userID := (mux.Vars(r))["userId"]
+	session, err := store.Get(r, "auth-cookie")
+	if err != nil {
+		log.Println("Failed to set auth cookie: " + err.Error())
+	}
+	userIDFromCookie := session.Values["userID"].(string)
+	if userID != userIDFromCookie {
+		logout(w, r)
+		return
+	}
 	userPage, _ := os.Open("static/templates/user-page.html")
 	fileSize, err := userPage.Stat()
 	userPageData := make([]byte, fileSize.Size())
