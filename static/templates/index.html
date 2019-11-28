@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
         integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <link rel="stylesheet" href="/node_modules/@fortawesome/fontawesome-free/css/all.min.css">
-
+    <i class="fas fa-boxes" style="color: white;font-size: 2em;"></i>
     <title>Share your albums</title>
 </head>
 
@@ -20,6 +20,9 @@
         <div class="container">
                 <div class=" loginAlert alert alert-danger" v-if="signInFailed && isSignIn" role="alert">
                         Username or Password Incorrect
+                    </div>
+                    <div class=" loginAlert alert alert-danger" v-if="signUpFailed && !isSignIn" role="alert">
+                        A user with this username already exists
                     </div>
             <div class="login row" v-if="isSignIn">
                 <!-- <div id="login" class="input-group mb-3"> -->
@@ -81,7 +84,8 @@
             isSignIn: true,
             email: '',
             password: '',
-            signInFailed: false
+            signInFailed: false,
+            signUpFailed:false
 
         },
         methods: {
@@ -90,6 +94,9 @@
                     axios.post("/register", { email: this.email, password: this.password })
                         .then(r => {
                             window.location = "/user/" + r.data.userID
+                        })
+                        .catch(e=>{
+                            this.signUpFailed = true;
                         })
                 }
             },
