@@ -74,7 +74,9 @@
                         </div>
                         <button class="btn btn-outline-success" style="margin-top: 0.5em;"
                             v-bind:disabled="collection.savePressed" @click="saveCollection(collection,index)">Save
-                            Changes</button>
+                            Changes
+                            <b-spinner v-if="collection.saveCollectionCtr !== 0" small label="Loading..."></b-spinner>
+                        </button>
 
                         <button class="btn btn-outline-info" style="margin-top: 0.5em;"
                             @click="showTooltipForLink(index)" v-bind:id="'sharedBtn'+index">Share Collection</button>
@@ -365,6 +367,7 @@
                                 collection.files = [];
                                 collection.addedFiles = [];
                                 collection.deletedImages = [];
+                                collection.saveCollectionCtr = 0;
                             })
                         }
                         // this.getImages()
@@ -380,7 +383,8 @@
                     imageUrls: [],
                     showImages: false,
                     displayImages: [],
-                    files: []
+                    files: [],
+                    saveCollectionCtr : 0
                 })
                 console.log(this.collections)
                 axios.post("/user-internal/" + this.userId + "/add-collection", this.collections, {
