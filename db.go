@@ -15,7 +15,6 @@ const database string = "imageCollector"
 func setUpDb() (*mongo.Client, error) {
 	// Set client options
 	DB_URI := os.Getenv("DB_STRING")
-	log.Println(DB_URI)
 	if DB_URI == "" {
 		log.Println("Connection string not found!")
 		return nil, errors.New("connection string not found")
@@ -40,6 +39,3 @@ func getCollection(collectionName string) *mongo.Collection {
 	return collection
 }
 
-func filterDb(collectionName, filterKey string) {
-
-}

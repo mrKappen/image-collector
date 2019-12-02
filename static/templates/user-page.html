@@ -75,7 +75,7 @@
                         <button class="btn btn-outline-success" style="margin-top: 0.5em;"
                             v-bind:disabled="collection.savePressed" @click="saveCollection(collection,index)">Save
                             Changes
-                            <b-spinner v-if="collection.saveCollectionCtr !== 0" small label="Loading..."></b-spinner>
+                            <b-spinner v-if="collection.saveCollectionCtr" small label="Loading..."></b-spinner>
                         </button>
 
                         <button class="btn btn-outline-info" style="margin-top: 0.5em;"
@@ -361,13 +361,15 @@
                             this.collections = []
                         }
                         if (this.collections.length > 0) {
+                            let vm = this
                             this.collections.forEach(collection => {
                                 collection.gotImages = false;
                                 collection.imageUrls = [];
                                 collection.files = [];
                                 collection.addedFiles = [];
                                 collection.deletedImages = [];
-                                collection.saveCollectionCtr = 0;
+                                vm.$set(collection,"saveCollectionCtr",0)
+                                // collection.saveCollectionCtr = 0;
                             })
                         }
                         // this.getImages()
