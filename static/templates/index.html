@@ -9,6 +9,7 @@
         integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <link rel="stylesheet" href="/node_modules/@fortawesome/fontawesome-free/css/all.min.css">
     <link rel="icon" href="/static/assets/boxes-solid.ico" type="image/x-icon">
+    <script type="text/javascript" src="/node_modules/vue/dist/vue.min.js"></script>
     <title>Share your albums</title>
 </head>
 
@@ -17,51 +18,49 @@
         <nav class="navbar navbar-dark bg-dark">
             <i class="fas fa-boxes" style="color: white;font-size: 2em;"></i>
         </nav>
-        <div class="container">
-                <div class=" loginAlert alert alert-danger" v-if="signInFailed && isSignIn" role="alert">
-                        Username or Password Incorrect
-                    </div>
-                    <div class=" loginAlert alert alert-danger" v-if="signUpFailed && !isSignIn" role="alert">
-                        A user with this username already exists
-                    </div>
-            <div class="login row" v-if="isSignIn">
-                <!-- <div id="login" class="input-group mb-3"> -->
-
-                <h3 id="heading">ACCOUNT LOGIN</h3>
-                <div class="input-group mb-3">
-                    <input type="text" class="form-control" placeholder="Username" aria-label="Username"
-                        aria-describedby="basic-addon1" v-model="email">
+        <div class="container" style="margin-top: 5em;">
+            <h1>Welcome.</h1>
+            <ul class="nav nav-tabs">
+                <li class="nav-item">
+                    <a class="nav-link" :class="{'active':selectedTab=='login'}" @click="selectedTab='login'">Sign In</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" :class="{'active':selectedTab=='register'}" @click="selectedTab='register'">Register</a>
+                </li>
+                <li class="nav-item">
+                        <a class="nav-link" :class="{'active':selectedTab=='about'}" @click="selectedTab='about'">About</a>
+                    </li>
+            </ul>
+            <br>
+            <div v-if="selectedTab=='login'">
+                <div class="form-group">
+                    <label for="exampleInputEmail1">Username</label>
+                    <input type="text" v-model="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp">
+                    <small id="emailHelp" v-if="signInFailed"class="form-text text-muted">Psst. We can't seem to find that username and password</small>
                 </div>
-                <div class="input-group mb-3" style="margin-bottom:  0;">
-                    <input type="password" class="form-control" placeholder="Password" aria-label="password"
-                        aria-describedby="basic-addon1" v-model="password">
+                <div class="form-group">
+                    <label for="exampleInputPassword1">Password</label>
+                    <input type="password" v-model="password" class="form-control" id="exampleInputPassword1">
                 </div>
-                <button class="btn btn-primary btn-lg signin" style=" margin-top:0;width: 100%;" @click="signIn">
-                    SIGN IN
-                </button>
-                <p id="createNewAccount" @click="isSignIn = false;signInFailed = false">
-                    Create new account →
-                </p>
-                <!-- </div> -->
+                <button type="submit" class="btn btn-primary" @click="signIn">Log In</button>
             </div>
-            <div class="login row" v-if="!isSignIn">
-                <!-- <div id="login" class="input-group mb-3"> -->
-                <h3 id="heading">ACCOUNT SIGN UP</h3>
-                <div class="input-group mb-3">
-                    <input type="text" class="form-control" placeholder="Username" aria-label="Username"
-                        aria-describedby="basic-addon1" v-model="email">
+            <div v-if="selectedTab=='register'">
+                    <div class="form-group">
+                        <label for="exampleInputEmail1">Create Username</label>
+                        <input type="text" v-model="email" class="form-control" id="exampleInputEmail1" aria-describedby="emailHelp">
+                        <small id="emailHelp" v-if="signUpFailed"class="form-text text-muted">Psst. Something seems to have gone wrong. Try a different username?</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="exampleInputPassword1">Create Password</label>
+                        <input type="password" v-model="password" class="form-control" id="exampleInputPassword1">
+                    </div>
+                    <button type="submit" class="btn btn-primary" @click="signUp">Register</button>
                 </div>
-                <div class="input-group mb-3" style="margin-bottom:  0;">
-                    <input type="password" class="form-control" placeholder="Password" aria-label="password"
-                        aria-describedby="basic-addon1" v-model="password">
-                </div>
-                <button class="btn btn-primary btn-lg signin" style=" margin-top:0;width: 100%;" @click="signUp">
-                    SIGN UP
-                </button>
-                <p id="createNewAccount" @click="isSignIn = true">
-                    Already have an account? →
+            <div v-if="selectedTab=='about'">
+                <p>
+                    Hey There! Thanks for checking out this page. </p><p>This web application allows you to organize all your photos into their own albums and then share those
+                    with whomever you like through a handy little link.</p> <p>Create an account to give it a go.
                 </p>
-                <!-- </div> -->
             </div>
         </div>
     </div>
@@ -81,11 +80,11 @@
     var vm = new Vue({
         el: '#index',
         data: {
-            isSignIn: true,
+            selectedTab:'login',
             email: '',
             password: '',
             signInFailed: false,
-            signUpFailed:false
+            signUpFailed: false
 
         },
         methods: {
@@ -95,7 +94,7 @@
                         .then(r => {
                             window.location = "/user/" + r.data.userID
                         })
-                        .catch(e=>{
+                        .catch(e => {
                             this.signUpFailed = true;
                         })
                 }
@@ -114,10 +113,6 @@
     export default { vm }
 </script>
 <style>
-    /* body{
-        background-image: url("static/assets/background.jpg");
-        filter: grayscale(20%)
-    } */
     .signin {
         background-color: black;
         border-radius: 10px;
@@ -149,15 +144,18 @@
 
     .loginAlert {
         /* position: absolute; */
-        margin:auto;
+        margin: auto;
         padding: 1em;
         width: 50%;
         min-width: 25em;
     }
+
     ::-webkit-scrollbar {
-    width: 0px;  /* Remove scrollbar space */
-    background: transparent;  /* Optional: just make scrollbar invisible */
-}
+        width: 0px;
+        /* Remove scrollbar space */
+        background: transparent;
+        /* Optional: just make scrollbar invisible */
+    }
 </style>
 
 </html>
